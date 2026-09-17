@@ -6,6 +6,7 @@ export default function Signup({ onSignedUp, onSwitchToLogin }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState("athlete");
   const [error, setError] = useState("");
 
   async function handleSubmit(e) {
@@ -16,7 +17,7 @@ export default function Signup({ onSignedUp, onSwitchToLogin }) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name, email, password, role }),
     });
     const data = await res.json();
 
@@ -57,6 +58,13 @@ export default function Signup({ onSignedUp, onSwitchToLogin }) {
           required
           minLength={8}
         />
+      </label>
+      <label>
+        I am a
+        <select value={role} onChange={(e) => setRole(e.target.value)}>
+          <option value="athlete">Athlete</option>
+          <option value="coach">Coach</option>
+        </select>
       </label>
       {error && <p role="alert">{error}</p>}
       <button type="submit">Sign Up</button>

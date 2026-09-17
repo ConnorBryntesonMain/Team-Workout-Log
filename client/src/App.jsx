@@ -9,7 +9,7 @@ export default function App() {
   if (user) {
     return (
       <p>
-        Logged in as {user.name} ({user.email})
+        Logged in as {user.name} ({user.email}) — {user.role}
       </p>
     );
   }
