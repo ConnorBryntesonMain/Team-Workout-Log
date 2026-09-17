@@ -3,5 +3,6 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(255) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
   name VARCHAR(255) NOT NULL,
+  role ENUM('coach', 'athlete') NOT NULL DEFAULT 'athlete',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
