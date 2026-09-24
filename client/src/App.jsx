@@ -20,15 +20,18 @@ export default function App() {
             Workouts
           </button>
         </nav>
-        {page === "profile" ? 
-        <Profile
-          onLoggedOut={() => {
-            setUser(null);
-            setMode("login");
-          }}
-        /> : <Workouts />}
-        </>
-      );
+        {page === "profile" ? (
+          <Profile
+            onLoggedOut={() => {
+              setUser(null);
+              setMode("login");
+            }}
+          />
+        ) : (
+          <Workouts />
+        )}
+      </>
+    );
   }
 
   return mode === "login" ? (

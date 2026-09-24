@@ -2,3 +2,4 @@ project_propsal.md
 node_modules/
 .env
 .claude/
+.DS_Store

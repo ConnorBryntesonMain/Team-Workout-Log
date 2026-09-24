@@ -58,6 +58,31 @@ psql -h localhost -U postgres -d team_workout_log -f server/db/schema.sql
 
 You should see `CREATE TABLE`.
 
+Load the demo accounts (safe to run more than once):
+
+```bash
+psql -h localhost -U postgres -d team_workout_log -f server/db/seed.sql
+```
+
+You should see `INSERT 0 2` (or `INSERT 0 0` if they already exist). This creates:
+
+| Email | Password | Role | Coach code |
+|-------|----------|------|------------|
+| `coach@demo.com` | `password123` | coach | `123456` |
+| `athlete@demo.com` | `password123` | athlete | — |
+
+**Already had a database from an earlier version?** `schema.sql` never changes an existing table. Either add the new columns:
+
+```bash
+psql -h localhost -U postgres -d team_workout_log -c "ALTER TABLE users ADD COLUMN IF NOT EXISTS coach_code VARCHAR(6) NOT NULL DEFAULT '000000', ADD COLUMN IF NOT EXISTS athlete_code VARCHAR(6);"
+```
+
+or start fresh (this deletes all accounts) and then re-run the schema and seed commands above:
+
+```bash
+psql -h localhost -U postgres -d team_workout_log -c "DROP TABLE users;"
+```
+
 ### 3. Configure and start the server
 
 ```bash
@@ -76,6 +101,16 @@ DB_PASSWORD=postgres
 DB_NAME=team_workout_log
 SESSION_SECRET=change-me
 ```
+
+| Variable | What it is |
+|----------|------------|
+| `PORT` | Port the API server listens on. Keep `3000`; the frontend expects it. |
+| `DB_HOST` / `DB_PORT` | Where PostgreSQL is running. |
+| `DB_USER` / `DB_PASSWORD` | PostgreSQL login from step 2. |
+| `DB_NAME` | Database created in step 2 (`team_workout_log`). |
+| `SESSION_SECRET` | Signs login cookies. Any non-empty string for local use. |
+
+`.env` is git-ignored; never commit it. `.env.example` holds no real secrets.
 
 Install dependencies and start the server:
 
@@ -105,12 +140,20 @@ npm run dev
 
 Open **http://localhost:5173**. Use `localhost`, not `127.0.0.1`: the server only accepts requests from `http://localhost:5173`, so the other address makes login fail.
 
-### 5. Try it out
+### 5. Verification guide (for the TA)
 
-1. Click **Sign Up**, fill in the form, and create an account (pick *coach* or *athlete*).
-2. You land on your **Profile** page, which shows your account details.
-3. Use the **Workouts** tab to see the base workout.
-4. Click **Log Out**, then log back in with the same email and password.
+With the database, server, and frontend running as above:
+
+| # | Do this | Expected result |
+|---|---------|-----------------|
+| 1 | `curl http://localhost:3000/health` | `{"status":"ok","db":"connected"}` |
+| 2 | Open http://localhost:5173 and log in as `coach@demo.com` / `password123` | The **Profile** page shows Demo Coach, the email, role `coach`, and a member-since date. |
+| 3 | Click **Workouts** in the nav bar | The **Base Workout** table lists 5 exercises with sets and reps. |
+| 4 | Click **Profile**, then **Log Out** | You return to the login page. |
+| 5 | Log in as `athlete@demo.com` / `password123` | The Profile page shows role `athlete`. |
+| 6 | Log out, try `athlete@demo.com` with a wrong password | The error "invalid email or password" appears. |
+| 7 | Click **Sign Up**, create a new account, pick a role | You land on that new account's Profile page. |
+| 8 | Log out, try signing up again with the same email | The error "email already registered" appears. |
 
 ### Troubleshooting
 
@@ -119,6 +162,7 @@ Open **http://localhost:5173**. Use `localhost`, not `127.0.0.1`: the server onl
 | `/health` returns `password authentication failed` | `DB_USER` / `DB_PASSWORD` in `server/.env` don't match Postgres. Redo the password step in step 2. |
 | `/health` returns `database "team_workout_log" does not exist` | Run the `createdb` command in step 2. |
 | `/health` returns `ECONNREFUSED` | Postgres isn't running. Start it (`brew services start postgresql@16`, `sudo service postgresql start`, or the Windows *Services* app). |
+| Server shows `column "coach_code" does not exist` | Your database predates the coach-code change. Run the `ALTER TABLE` command in step 2. |
 | Sign-up fails with `relation "users" does not exist` | The schema wasn't loaded. Run the `psql ... -f server/db/schema.sql` command in step 2. |
 | Login/sign-up returns `internal server error` and the server terminal shows `secret option required for sessions` | `server/.env` is missing or `SESSION_SECRET` is empty. Redo step 3, then restart the server. |
 | `EADDRINUSE: address already in use :::3000` | Something else is using port 3000. Stop it, or set `PORT` in `.env`. The frontend expects port 3000, so stopping the other program is simpler. |
