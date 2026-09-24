@@ -19,14 +19,14 @@ router.post(
 
     const passwordHash = await bcrypt.hash(password, 10);
     try {
-      const [result] = await pool.query(
-        "INSERT INTO users (email, password_hash, name, role) VALUES (?, ?, ?, ?)",
+      const { rows } = await pool.query(
+        "INSERT INTO users (email, password_hash, name, role) VALUES ($1, $2, $3, $4) RETURNING id",
         [email, passwordHash, name, role]
       );
-      req.session.userId = result.insertId;
-      res.status(201).json({ id: result.insertId, email, name, role });
+      req.session.userId = rows[0].id;
+      res.status(201).json({ id: rows[0].id, email, name, role });
     } catch (err) {
-      if (err.code === "ER_DUP_ENTRY") {
+      if (err.code === "23505") {
         return res.status(409).json({ error: "email already registered" });
       }
       throw err;
@@ -42,7 +42,7 @@ router.post(
       return res.status(400).json({ error: "email and password are required" });
     }
 
-    const [rows] = await pool.query("SELECT * FROM users WHERE email = ?", [email]);
+    const { rows } = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
     const user = rows[0];
     if (!user || !(await bcrypt.compare(password, user.password_hash))) {
       return res.status(401).json({ error: "invalid email or password" });
@@ -61,7 +61,7 @@ router.get(
   "/me",
   wrap(async (req, res) => {
     if (!req.session.userId) return res.status(401).json({ error: "not logged in" });
-    const [rows] = await pool.query("SELECT id, email, name, role FROM users WHERE id = ?", [
+    const { rows } = await pool.query("SELECT id, email, name, role FROM users WHERE id = $1", [
       req.session.userId,
     ]);
     if (!rows[0]) return res.status(401).json({ error: "not logged in" });
