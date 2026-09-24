@@ -109,3 +109,31 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+dd {
+  margin: 0 0 12px;
+}
+
+nav {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+nav [aria-current="page"] {
+  color: var(--accent);
+  border-color: var(--accent-border);
+}
+
+th,
+td {
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+table {
+  margin: 0 auto;
+  text-align: center;
+}

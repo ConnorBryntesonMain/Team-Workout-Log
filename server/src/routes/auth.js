@@ -161,7 +161,7 @@ router.get(
         name,
         role,
         coach_code,
-        athlete_code
+        athlete_code,
       created_at FROM users
       WHERE id = $1
       `,
@@ -181,6 +181,7 @@ router.get(
       role: rows[0].role,
       coachCode: rows[0].coach_code,
       athleteCode: rows[0].athlete_code,
+      created_at: rows[0].created_at,
     });
   })
 );
