@@ -147,13 +147,19 @@ With the database, server, and frontend running as above:
 | # | Do this | Expected result |
 |---|---------|-----------------|
 | 1 | `curl http://localhost:3000/health` | `{"status":"ok","db":"connected"}` |
-| 2 | Open http://localhost:5173 and log in as `coach@demo.com` / `password123` | The **Profile** page shows Demo Coach, the email, role `coach`, and a member-since date. |
+| 2 | Open http://localhost:5173 and log in as `coach@demo.com` / `password123` | The **Profile** page shows Coach Code `123456`, Demo Coach, the email, role `coach`, and a member-since date. |
 | 3 | Click **Workouts** in the nav bar | The **Base Workout** table lists 5 exercises with sets and reps. |
-| 4 | Click **Profile**, then **Log Out** | You return to the login page. |
-| 5 | Log in as `athlete@demo.com` / `password123` | The Profile page shows role `athlete`. |
-| 6 | Log out, try `athlete@demo.com` with a wrong password | The error "invalid email or password" appears. |
-| 7 | Click **Sign Up**, create a new account, pick a role | You land on that new account's Profile page. |
-| 8 | Log out, try signing up again with the same email | The error "email already registered" appears. |
+| 4 | Click **Team** in the nav bar | "No athletes yet" appears (the demo athlete hasn't joined). |
+| 5 | Click **Profile**, then **Log Out** | You return to the login page. |
+| 6 | Log in as `athlete@demo.com` / `password123` | The Profile page shows role `athlete`, an **Enter Team Code** box, and no **Team** tab. |
+| 7 | Enter `999999` and click **Join** | The error "team code does not exist" appears. |
+| 8 | Enter `123456` and click **Join** | The page shows Team Code `123456`, Coach Name: Demo Coach, and a **Leave Team** button. |
+| 9 | Log out, log in as `coach@demo.com`, click **Team** | Demo Athlete is listed with their email. |
+| 10 | Click **View Workout** next to Demo Athlete | The base workout table opens under that row; the button changes to **Hide Workout**. |
+| 11 | Log out, log in as `athlete@demo.com`, click **Leave Team** | The Enter Team Code box returns. |
+| 12 | Log out, try `athlete@demo.com` with a wrong password | The error "invalid email or password" appears. |
+| 13 | Click **Sign Up**, create a new account, pick a role | You land on that new account's Profile page. |
+| 14 | Log out, try signing up again with the same email | The error "email already registered" appears. |
 
 ### Troubleshooting
 
@@ -167,16 +173,17 @@ With the database, server, and frontend running as above:
 | Login/sign-up returns `internal server error` and the server terminal shows `secret option required for sessions` | `server/.env` is missing or `SESSION_SECRET` is empty. Redo step 3, then restart the server. |
 | `EADDRINUSE: address already in use :::3000` | Something else is using port 3000. Stop it, or set `PORT` in `.env`. The frontend expects port 3000, so stopping the other program is simpler. |
 | Login/sign-up shows a network error in the browser | Make sure the server terminal is still running and you opened `http://localhost:5173`, not `127.0.0.1`. |
+| A page shows `Unexpected token '<', "<!DOCTYPE "... is not valid JSON` | The server is running old code without that route. Stop it (Ctrl+C) and start it again. `npm run dev` in `server/` restarts on file changes, but can miss some edits on WSL. |
 | `npm run dev` errors about the Node version | Upgrade Node to 20.19+ or 22.12+. |
 
 ## Features (MVP)
  
-- Team code access, so athletes can join a coach's team.
-- Exercise templates, and athletes selecting workouts from templates.
-- Login page for users.
+- Login page for users. **(done)**
+- Team code access, so athletes can join a coach's team. **(done: join, leave, and a coach Team page listing athletes)**
+- Exercise templates, and athletes selecting workouts from templates. *(one hard-coded base workout for now)*
 - Log of workouts.
 - Athlete-assigned workouts.
-- Coach access to an athlete's workout log.
+- Coach access to an athlete's workout log. *(Team page shows each athlete's current workout, which is the base workout until workouts are stored per athlete)*
 ## Possible Later Features
  
 - Custom exercise creation (coach and athlete).
