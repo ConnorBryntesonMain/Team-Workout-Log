@@ -140,6 +140,72 @@ router.post(
   })
 );
 
+router.post(
+  "/join-team",
+  wrap(async (req, res) => {
+    const { coachCode } = req.body;
+
+    if (!req.session.userId) {
+      return res.status(401).json({
+        error: "not logged in",
+      });
+    }
+
+    const coachResult = await pool.query(
+      `
+      SELECT id
+      FROM users
+      WHERE role = 'coach'
+      AND coach_code = $1
+      `,
+      [coachCode]
+    );
+
+    if (coachResult.rows.length === 0) {
+      return res.status(404).json({
+        error: "team code does not exist",
+      });
+    }
+
+    await pool.query(
+      `
+      UPDATE users
+      SET athlete_code = $1
+      WHERE id = $2
+      `,
+      [coachCode, req.session.userId]
+    );
+
+    res.json({
+      athleteCode: coachCode,
+    });
+  })
+);
+
+router.post(
+  "/leave-team",
+  wrap(async (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({
+        error: "not logged in",
+      });
+    }
+
+    await pool.query(
+      `
+      UPDATE users
+      SET athlete_code = NULL
+      WHERE id = $1
+      `,
+      [req.session.userId]
+    );
+
+    res.json({
+      success: true,
+    });
+  })
+);
+
 router.post("/logout", (req, res) => {
   req.session.destroy(() => res.status(204).end());
 });
@@ -156,14 +222,19 @@ router.get(
     const { rows } = await pool.query(
       `
       SELECT
-        id,
-        email,
-        name,
-        role,
-        coach_code,
-        athlete_code,
-      created_at FROM users
-      WHERE id = $1
+        u.id,
+        u.email,
+        u.name,
+        u.role,
+        u.coach_code,
+        u.athlete_code,
+        u.created_at,
+        c.name AS coach_name
+      FROM users u
+      LEFT JOIN users c
+        ON u.athlete_code = c.coach_code
+      AND c.role = 'coach'
+      WHERE u.id = $1
       `,
       [req.session.userId]
     );
@@ -181,6 +252,7 @@ router.get(
       role: rows[0].role,
       coachCode: rows[0].coach_code,
       athleteCode: rows[0].athlete_code,
+      coachName: rows[0].coach_name,
       created_at: rows[0].created_at,
     });
   })
