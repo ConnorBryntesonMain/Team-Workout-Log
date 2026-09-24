@@ -4,5 +4,7 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash VARCHAR(255) NOT NULL,
   name VARCHAR(255) NOT NULL,
   role VARCHAR(20) NOT NULL DEFAULT 'athlete' CHECK (role IN ('coach', 'athlete')),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  coach_code VARCHAR(6) NOT NULL,
+  athlete_code VARCHAR(6)
 );
