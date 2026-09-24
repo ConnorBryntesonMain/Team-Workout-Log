@@ -3,6 +3,7 @@ import Login from "./Login.jsx";
 import Signup from "./Signup.jsx";
 import Profile from "./Profile.jsx";
 import Workouts from "./Workouts.jsx";
+import Team from "./Team.jsx";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -19,6 +20,11 @@ export default function App() {
           <button type="button" onClick={() => setPage("workouts")} aria-current={page === "workouts" ? "page" : undefined}>
             Workouts
           </button>
+          {user.role === "coach" && (
+            <button type="button" onClick={() => setPage("team")} aria-current={page === "team" ? "page" : undefined}>
+              Team
+            </button>
+          )}
         </nav>
         {page === "profile" ? (
           <Profile
@@ -27,6 +33,8 @@ export default function App() {
               setMode("login");
             }}
           />
+        ) : page === "team" ? (
+          <Team />
         ) : (
           <Workouts />
         )}
