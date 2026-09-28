@@ -17,9 +17,11 @@ export default function App() {
           <button type="button" onClick={() => setPage("profile")} aria-current={page === "profile" ? "page" : undefined}>
             Profile
           </button>
-          <button type="button" onClick={() => setPage("workouts")} aria-current={page === "workouts" ? "page" : undefined}>
+	    {user.role === "athlete" && (
+	    <button type="button" onClick={() => setPage("workouts")} aria-current={page === "workouts" ? "page" : undefined}>
             Workouts
           </button>
+	  )}
           {user.role === "coach" && (
             <button type="button" onClick={() => setPage("team")} aria-current={page === "team" ? "page" : undefined}>
               Team
