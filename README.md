@@ -56,7 +56,7 @@ createdb -h localhost -U postgres team_workout_log
 psql -h localhost -U postgres -d team_workout_log -f server/db/schema.sql
 ```
 
-You should see `CREATE TABLE`.
+You should see several `CREATE TABLE` and `CREATE INDEX` lines (tables: `users`, `coach_workouts`, `workouts`, `workout_exercises`).
 
 Load the demo accounts (safe to run more than once):
 
@@ -71,7 +71,7 @@ You should see `INSERT 0 2` (or `INSERT 0 0` if they already exist). This create
 | `coach@demo.com` | `password123` | coach | `123456` |
 | `athlete@demo.com` | `password123` | athlete | — |
 
-**Already had a database from an earlier version?** `schema.sql` never changes an existing table. Either add the new columns:
+**Already had a database from an earlier version?** Re-running `schema.sql` is safe and creates any missing tables (such as the workout tables), but it never changes an existing table. If `users` predates coach codes, either add the new columns:
 
 ```bash
 psql -h localhost -U postgres -d team_workout_log -c "ALTER TABLE users ADD COLUMN IF NOT EXISTS coach_code VARCHAR(6) NOT NULL DEFAULT '000000', ADD COLUMN IF NOT EXISTS athlete_code VARCHAR(6);"
@@ -148,18 +148,33 @@ With the database, server, and frontend running as above:
 |---|---------|-----------------|
 | 1 | `curl http://localhost:3000/health` | `{"status":"ok","db":"connected"}` |
 | 2 | Open http://localhost:5173 and log in as `coach@demo.com` / `password123` | The **Profile** page shows Coach Code `123456`, Demo Coach, the email, role `coach`, and a member-since date. |
-| 3 | Click **Workouts** in the nav bar | The **Base Workout** table lists 5 exercises with sets and reps. |
-| 4 | Click **Team** in the nav bar | "No athletes yet" appears (the demo athlete hasn't joined). |
-| 5 | Click **Profile**, then **Log Out** | You return to the login page. |
-| 6 | Log in as `athlete@demo.com` / `password123` | The Profile page shows role `athlete`, an **Enter Team Code** box, and no **Team** tab. |
-| 7 | Enter `999999` and click **Join** | The error "team code does not exist" appears. |
-| 8 | Enter `123456` and click **Join** | The page shows Team Code `123456`, Coach Name: Demo Coach, and a **Leave Team** button. |
-| 9 | Log out, log in as `coach@demo.com`, click **Team** | Demo Athlete is listed with their email. |
-| 10 | Click **View Workout** next to Demo Athlete | The base workout table opens under that row; the button changes to **Hide Workout**. |
-| 11 | Log out, log in as `athlete@demo.com`, click **Leave Team** | The Enter Team Code box returns. |
-| 12 | Log out, try `athlete@demo.com` with a wrong password | The error "invalid email or password" appears. |
-| 13 | Click **Sign Up**, create a new account, pick a role | You land on that new account's Profile page. |
-| 14 | Log out, try signing up again with the same email | The error "email already registered" appears. |
+| 3 | Click **Workouts** in the nav bar | "You haven't built any workouts yet." and a **New Workout** button. |
+| 4 | Click **New Workout**, name it `Leg Day`, add `Squat` / 3 sets / `8` reps, click **Save Workout** | The **Leg Day** table appears with **Edit** and **Delete** buttons. |
+| 5 | Click **Edit**, change reps to `10`, click **Save Workout** | The table shows 10 reps. |
+| 6 | Click **Team** in the nav bar | "No athletes yet" appears (the demo athlete hasn't joined). |
+| 7 | Click **Profile**, then **Log Out** | You return to the login page. |
+| 8 | Log in as `athlete@demo.com` / `password123` | The Profile page shows role `athlete`, an **Enter Team Code** box, and no **Team** tab. |
+| 9 | Click **Workouts** | "Your coach hasn't posted any workouts yet." and an empty **My Log**. |
+| 10 | Click **Profile**, enter `999999` and click **Join** | The error "team code does not exist" appears. |
+| 11 | Enter `123456` and click **Join** | The page shows Team Code `123456`, Coach Name: Demo Coach, and a **Leave Team** button. |
+| 12 | Click **Workouts**, then **Log This Workout** under Leg Day | A form with one row per set, reps prefilled with `10`. |
+| 13 | Enter weights (e.g. `225`), leave one blank, click **Save Log** | **My Log** shows Leg Day with today's date; the blank weight shows "Bodyweight". |
+| 14 | Log out, log in as `coach@demo.com`, click **Team** | Demo Athlete is listed with their email. |
+| 15 | Click **View Workout** next to Demo Athlete | The athlete's logged Leg Day opens under that row; the button changes to **Hide Workout**. |
+| 16 | Log out, log in as `athlete@demo.com`, click **Leave Team** | The Enter Team Code box returns. |
+| 17 | Log out, try `athlete@demo.com` with a wrong password | The error "invalid email or password" appears. |
+| 18 | Click **Sign Up**, create a new account, pick a role | You land on that new account's Profile page. |
+| 19 | Log out, try signing up again with the same email | The error "email already registered" appears. |
+
+### Running tests
+
+From `server/`:
+
+```bash
+node --test src/
+```
+
+This runs the workout validation checks in `server/src/routes/workouts.test.js` (no database needed).
 
 ### Troubleshooting
 
@@ -169,6 +184,7 @@ With the database, server, and frontend running as above:
 | `/health` returns `database "team_workout_log" does not exist` | Run the `createdb` command in step 2. |
 | `/health` returns `ECONNREFUSED` | Postgres isn't running. Start it (`brew services start postgresql@16`, `sudo service postgresql start`, or the Windows *Services* app). |
 | Server shows `column "coach_code" does not exist` | Your database predates the coach-code change. Run the `ALTER TABLE` command in step 2. |
+| Workouts page shows `internal server error` and the server shows `relation "coach_workouts" does not exist` (or `workouts`) | Your database predates the workout tables. Re-run the `psql ... -f server/db/schema.sql` command in step 2. |
 | Sign-up fails with `relation "users" does not exist` | The schema wasn't loaded. Run the `psql ... -f server/db/schema.sql` command in step 2. |
 | Login/sign-up returns `internal server error` and the server terminal shows `secret option required for sessions` | `server/.env` is missing or `SESSION_SECRET` is empty. Redo step 3, then restart the server. |
 | `EADDRINUSE: address already in use :::3000` | Something else is using port 3000. Stop it, or set `PORT` in `.env`. The frontend expects port 3000, so stopping the other program is simpler. |
@@ -180,10 +196,10 @@ With the database, server, and frontend running as above:
  
 - Login page for users. **(done)**
 - Team code access, so athletes can join a coach's team. **(done: join, leave, and a coach Team page listing athletes)**
-- Exercise templates, and athletes selecting workouts from templates. *(one hard-coded base workout for now)*
-- Log of workouts.
-- Athlete-assigned workouts.
-- Coach access to an athlete's workout log. *(Team page shows each athlete's current workout, which is the base workout until workouts are stored per athlete)*
+- Exercise templates, and athletes selecting workouts from templates. **(done: coaches create, edit, and delete workouts; athletes on the team see them)**
+- Log of workouts. **(done: athletes log reps and weight per set and see their history under My Log)**
+- Athlete-assigned workouts. *(every workout a coach builds is shared with the whole team; no per-athlete assignment yet)*
+- Coach access to an athlete's workout log. **(done: Team page → View Workout shows the athlete's logged workouts)**
 ## Possible Later Features
  
 - Custom exercise creation (coach and athlete).
