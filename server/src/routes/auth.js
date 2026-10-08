@@ -206,6 +206,33 @@ router.post(
   })
 );
 
+router.get(
+  "/team",
+  wrap(async (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({
+        error: "not logged in",
+      });
+    }
+
+    const { rows } = await pool.query(
+      `
+      SELECT a.id, a.name, a.email
+      FROM users c
+      JOIN users a
+        ON a.athlete_code = c.coach_code
+      AND a.role = 'athlete'
+      WHERE c.id = $1
+      AND c.role = 'coach'
+      ORDER BY a.name
+      `,
+      [req.session.userId]
+    );
+
+    res.json(rows);
+  })
+);
+
 router.post("/logout", (req, res) => {
   req.session.destroy(() => res.status(204).end());
 });

@@ -1,5 +1,5 @@
 // ponytail: hard-coded base workout shared by every athlete; move to the DB when coaches can create workouts
-const BASE_WORKOUT = [
+export const BASE_WORKOUT = [
   { exercise: "Back Squat", sets: 3, reps: "8" },
   { exercise: "Bench Press", sets: 3, reps: "8" },
   { exercise: "Deadlift", sets: 3, reps: "5" },
@@ -34,5 +34,28 @@ export default function Workouts() {
         New Workout
       </button>
     </section>
+  );
+}
+
+export function WorkoutTable({ rows }) {
+  return (
+    <table>
+      <thead>
+        <tr>
+          <th>Exercise</th>
+          <th>Sets</th>
+          <th>Reps</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr key={row.exercise}>
+            <td>{row.exercise}</td>
+            <td>{row.sets}</td>
+            <td>{row.reps}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }

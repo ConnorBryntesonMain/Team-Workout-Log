@@ -6,8 +6,8 @@ flowchart LR
     API -->|Request| DB[("PostgreSQL database<br/>Persistent storage")]
     DB -.->|Response| API
 
-    API -->|Sends token| Auth["Auth service<br/>Third-party login"]
-    Auth -.->|Returns validity| API
+    Client -->|Session cookie| API
+    API -->|Checks password hash<br/>bcrypt| DB
 ```
 
 ---
