@@ -4,6 +4,7 @@ import cors from "cors";
 import session from "express-session";
 import { pool } from "./db.js";
 import authRouter from "./routes/auth.js";
+import workoutsRouter from "./routes/workouts.js";
 
 const app = express();
 app.use(cors({ origin: "http://localhost:5173", credentials: true }));
@@ -18,6 +19,7 @@ app.use(
 );
 
 app.use("/api/auth", authRouter);
+app.use("/api/workouts", workoutsRouter);
 
 app.get("/health", async (_req, res) => {
   try {
