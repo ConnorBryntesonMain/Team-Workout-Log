@@ -30,6 +30,9 @@ export default function Workouts() {
           ))}
         </tbody>
       </table>
+      <button>
+        New Workout
+      </button>
     </section>
   );
 }
