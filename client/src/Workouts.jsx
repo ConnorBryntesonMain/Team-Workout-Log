@@ -12,7 +12,27 @@ export default function Workouts() {
     <section id="center">
       <h1>Workouts</h1>
       <h2>Base Workout</h2>
-      <WorkoutTable rows={BASE_WORKOUT} />
+      <table>
+        <thead>
+          <tr>
+            <th>Exercise</th>
+            <th>Sets</th>
+            <th>Reps</th>
+          </tr>
+        </thead>
+        <tbody>
+          {BASE_WORKOUT.map((row) => (
+            <tr key={row.exercise}>
+              <td>{row.exercise}</td>
+              <td>{row.sets}</td>
+              <td>{row.reps}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <button>
+        New Workout
+      </button>
     </section>
   );
 }
