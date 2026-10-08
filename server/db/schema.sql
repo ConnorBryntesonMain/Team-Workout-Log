@@ -28,3 +28,12 @@ CREATE TABLE IF NOT EXISTS workout_exercises (
   weight NUMERIC(6, 2) CHECK (weight >= 0)
 );
 CREATE INDEX IF NOT EXISTS workout_exercises_workout_idx ON workout_exercises (workout_id);
+
+-- Workouts a coach builds for their team; exercises is [{exercise, sets, reps}].
+CREATE TABLE IF NOT EXISTS coach_workouts (
+  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  coach_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name VARCHAR(100) NOT NULL,
+  exercises JSONB NOT NULL DEFAULT '[]'
+);
+CREATE INDEX IF NOT EXISTS coach_workouts_coach_idx ON coach_workouts (coach_id);
