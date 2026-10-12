@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useState } from "react";
 import { LogTable } from "./Workouts.jsx";
+import "./App.css";
 
 const API_URL = "http://localhost:3000/api/auth";
 const WORKOUTS_URL = "http://localhost:3000/api/workouts";
@@ -62,7 +63,7 @@ export default function Team() {
       {athletes.length === 0 ? (
         <p>No athletes yet. Share your coach code so they can join.</p>
       ) : (
-        <table>
+        <table className="team-table">
           <thead>
             <tr>
               <th>Name</th>
