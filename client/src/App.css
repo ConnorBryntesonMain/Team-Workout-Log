@@ -59,8 +59,7 @@
 #center {
   display: flex;
   flex-direction: column;
-  gap: 25px;
-  place-content: center;
+  gap: 5px;
   place-items: center;
   flex-grow: 1;
 
@@ -181,4 +180,46 @@
     right: 0;
     border-right-color: var(--border);
   }
+}
+
+.new-workout-btn {
+  margin-top: 2rem;
+  padding: 8px 16px;
+  font-size: .8rem;
+  font-weight: bold;
+}
+
+.team-table {
+  table-layout: fixed;
+  width: 75%;
+}
+
+h1 {
+  margin-bottom: 1rem;
+}
+
+h2 {
+  margin-top: 0.5rem;
+}
+
+button {
+margin-left: 3px;
+margin-right: 3px;
+}
+
+details {
+  width: 100%;
+  max-width: 800px;
+}
+
+summary {
+  font-size: 2.5rem;
+  cursor: pointer;
+  margin-bottom: 1rem;
+  margin-top: 3rem;
+  color: white;
+}
+
+details[open] summary {
+  margin-bottom: 1rem;
 }
