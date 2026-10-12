@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import "./App.css";
 
 const API_URL = "http://localhost:3000/api/workouts";
 
@@ -13,6 +14,7 @@ export default function Workouts({ user }) {
   const [logDraft, setLogDraft] = useState(null);
   const [log, setLog] = useState([]);
   const isCoach = user.role === "coach";
+  const showWorkoutList = !draft && !logDraft;
 
   useEffect(() => {
     fetch(API_URL, { credentials: "include" })
@@ -318,61 +320,67 @@ export default function Workouts({ user }) {
         </form>
       )}
 
+      {showWorkoutList &&(
+        workouts.length === 0 ? (
+          <p>
+            {isCoach
+              ? "You haven't built any workouts yet."
+              : "Your coach hasn't posted any workouts yet."}
+          </p>
+        ) : (
+          workouts.map((w) => (
+            <div key={w.id}>
+              <h2>{w.name}</h2>
+              <WorkoutTable rows={w.exercises} />
+              {!isCoach && !logDraft && (
+                <button type="button" onClick={() => startLog(w)}>
+                  Log This Workout
+                </button>
+                
+              )}
+              {isCoach && (
+                <>
+                  <button type="button" onClick={() => setDraft(w)}>
+                    Edit
+                  </button>
+                  <button type="button" onClick={() => handleDelete(w.id)}>
+                    Delete
+                  </button>
+                </>
+              )}
+            </div>
+          ))
+        )
+      )}
+
       {isCoach && !draft && (
         <button
           type="button"
+          className="new-workout-btn"
           onClick={() => setDraft({ name: "", exercises: [EMPTY_ROW] })}
         >
           New Workout
         </button>
       )}
 
-      {workouts.length === 0 ? (
-        <p>
-          {isCoach
-            ? "You haven't built any workouts yet."
-            : "Your coach hasn't posted any workouts yet."}
-        </p>
-      ) : (
-        workouts.map((w) => (
-          <div key={w.id}>
-            <h2>{w.name}</h2>
-            <WorkoutTable rows={w.exercises} />
-            {!isCoach && !logDraft && (
-              <button type="button" onClick={() => startLog(w)}>
-                Log This Workout
-              </button>
-            )}
-            {isCoach && (
-              <>
-                <button type="button" onClick={() => setDraft(w)}>
-                  Edit
-                </button>
-                <button type="button" onClick={() => handleDelete(w.id)}>
-                  Delete
-                </button>
-              </>
-            )}
-          </div>
-        ))
-      )}
-
-      {!isCoach && (
+      {!isCoach && !logDraft &&(
         <>
-          <h2>My Log</h2>
-          {log.length === 0 ? (
-            <p>You haven't logged any workouts yet.</p>
-          ) : (
-            log.map((entry) => (
-              <div key={entry.id}>
-                <h3>
-                  {entry.name || "Deleted workout"} ·{" "}
-                  {new Date(entry.performed_at).toLocaleDateString()}
-                </h3>
-                <LogTable sets={entry.exercises} />
-              </div>
-            ))
-          )}
+          <details>
+            <summary>My Log</summary>
+            {log.length === 0 ? (
+              <p>You haven't logged any workouts yet.</p>
+            ) : (
+              log.map((entry) => (
+                <div key={entry.id}>
+                  <h3>
+                    {entry.name || "Deleted workout"} ·{" "}
+                    {new Date(entry.performed_at).toLocaleDateString()}
+                  </h3>
+                  <LogTable sets={entry.exercises} />
+                </div>
+              ))
+            )}
+          </details>
         </>
       )}
     </section>
