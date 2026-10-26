@@ -11,7 +11,8 @@ Short records of the significant design choices in Team Workout Log: what we dec
 | 5 | Single `users` table with a `role` column | Accepted |
 | 6 | Team membership via six-digit coach codes | Accepted |
 | 7 | Client-side page switching instead of a router | Accepted |
-| 8 | Hard-coded base workout until workout logging exists | Accepted (temporary) |
+| 8 | Hard-coded base workout until workout logging exists | Superseded by ADR 9 |
+| 9 | Coach workouts as JSONB templates; logs stored one row per set | Accepted |
 
 ---
 
@@ -91,7 +92,7 @@ We chose sessions over JWTs because they are simpler to get right: logout just d
 
 **Context.** There are two kinds of users, coaches and athletes. They share login, name, and email, and differ only in a few fields and in what pages they see.
 
-**Decision.** Store both in one `users` table with `role IN ('coach', 'athlete')` enforced by a `CHECK` constraint. The client shows or hides pages based on `user.role` (athletes get **Workouts**, coaches get **Team**).
+**Decision.** Store both in one `users` table with `role IN ('coach', 'athlete')` enforced by a `CHECK` constraint. The client shows or hides pages based on `user.role` (both roles get **Workouts**, which shows different controls per role; only coaches get **Team**).
 
 **Consequences.**
 - One login and sign-up flow for both roles.
@@ -132,7 +133,7 @@ We chose sessions over JWTs because they are simpler to get right: logout just d
 
 ## ADR 8: Hard-coded base workout until workout logging exists
 
-**Date:** 2026 · **Status:** Accepted (temporary)
+**Date:** 2026 · **Status:** Superseded by ADR 9
 
 **Context.** Workout templates and logging are not built yet (backlog: *In Progress*), but coaches and athletes need something to see on the Workouts and Team pages.
 
@@ -143,3 +144,24 @@ We chose sessions over JWTs because they are simpler to get right: logout just d
 - Every athlete sees the same workout, and nothing is saved.
 - This record will be superseded when workout tables are added to `schema.sql` and served by the API.
 
+
+## ADR 9: Coach workouts as JSONB templates; logs stored one row per set
+
+**Date:** 2026-10 · **Status:** Accepted (supersedes ADR 8)
+
+**Context.** Coaches need to build workouts for their team, and athletes need to record what they actually did (reps and weight for each set) so progress can be tracked and reviewed by the coach.
+
+**Decision.** Add three tables to `server/db/schema.sql`, served by `server/src/routes/workouts.js` under `/api/workouts`:
+
+- `coach_workouts`: a coach's workout template. The exercise list (`[{exercise, sets, reps}]`) is one `JSONB` column, since it is always read and written as a whole.
+- `workouts`: one row per logged session (athlete, which template, when).
+- `workout_exercises`: one row per set actually performed (`exercise`, `set_number`, `reps`, optional `weight`; `NULL` weight means bodyweight).
+
+Every workout a coach builds is visible to all athletes whose `athlete_code` matches the coach's `coach_code` (ADR 6). Only coaches can create, edit, or delete workouts, and only athletes can log them; both checks run on the server. Coaches read an athlete's log with `GET /api/workouts/log?athleteId=`, which is limited to athletes on their team. A log is inserted in a single transaction.
+
+**Consequences.**
+- Templates are simple to edit (one row update), while logged sets are relational, so per-exercise history and max-lift queries can be added later with plain SQL.
+- `reps` is text in both places so values like `30 sec` work, which means reps can't be summed or compared numerically.
+- Deleting a coach workout keeps athletes' logs (`ON DELETE SET NULL`); they show as "Deleted workout". Editing a template does not change past logs, because logs copy exercise names.
+- There is no per-athlete assignment: the whole team sees every workout.
+- Input validation (`validateWorkout`, `validateLog`) has a small test file run with `node --test src/` in `server/`.

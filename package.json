@@ -1,0 +1,17 @@
+{
+  "name": "team-workout-log",
+  "version": "1.0.0",
+  "description": "CS 415/515-002 — Software Design & Development",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {},
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^26.6.5"
+  }
+}

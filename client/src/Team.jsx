@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from "react";
-import { LogTable } from "./Workouts.jsx";
+import { LogTable, downloadLog } from "./Workouts.jsx";
 import "./App.css";
 
 const API_URL = "http://localhost:3000/api/auth";
@@ -48,6 +48,30 @@ export default function Team() {
     setLog({ athleteId: id, entries: data });
   }
 
+  // ponytail: one request per athlete; add a team-wide /log endpoint if teams get large.
+  async function downloadTeamLog() {
+    setError("");
+
+    try {
+      const sheets = await Promise.all(
+        athletes.map(async (a) => {
+          const res = await fetch(`${WORKOUTS_URL}/log?athleteId=${a.id}`, { credentials: "include" });
+          const data = await res.json();
+
+          if (!res.ok) {
+            throw new Error(data.error || "could not load workouts");
+          }
+
+          return { name: a.name, entries: data };
+        })
+      );
+
+      await downloadLog("team-workout-log.xlsx", sheets);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   if (error && !athletes) {
     return <p role="alert">{error}</p>;
   }
@@ -60,6 +84,11 @@ export default function Team() {
     <section id="center">
       <h1>My Team</h1>
       {error && <p role="alert">{error}</p>}
+      {athletes.length > 0 && (
+        <button type="button" onClick={downloadTeamLog}>
+          Download Team Log
+        </button>
+      )}
       {athletes.length === 0 ? (
         <p>No athletes yet. Share your coach code so they can join.</p>
       ) : (
