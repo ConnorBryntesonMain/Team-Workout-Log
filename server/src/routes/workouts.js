@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { pool } from "../db.js";
 
+
 const router = Router();
 
 const wrap = (fn) => (req, res, next) =>
@@ -164,6 +165,7 @@ router.get(
       SELECT
         w.id,
         w.performed_at,
+        w.coach_workout_id,
         cw.name,
         json_agg(
           json_build_object('exercise', e.exercise, 'set', e.set_number, 'reps', e.reps, 'weight', e.weight)
@@ -175,13 +177,139 @@ router.get(
       JOIN workout_exercises e
         ON e.workout_id = w.id
       WHERE w.athlete_id = $1
-      GROUP BY w.id, cw.name
+      GROUP BY w.id, w.coach_workout_id, cw.name
       ORDER BY w.performed_at DESC
       `,
       [athleteId]
     );
 
     res.json(rows);
+  })
+);
+
+router.put(
+  "/log/:id",
+  wrap(async (req, res) => {
+    const user = await currentUser(req);
+
+    if (user?.role !== "athlete") {
+      return res.status(403).json({
+        error: "only athletes can edit logged workouts",
+      });
+    }
+
+    const error = validateLog(req.body);
+
+    if (error) {
+      return res.status(400).json({ error });
+    }
+
+    const client = await pool.connect();
+
+    try {
+      await client.query("BEGIN");
+
+      const { rows } = await client.query(
+        `
+        SELECT id
+        FROM workouts
+        WHERE id = $1
+        AND athlete_id = $2
+        `,
+        [req.params.id, user.id]
+      );
+
+      if (!rows[0]) {
+        await client.query("ROLLBACK");
+
+        return res.status(404).json({
+          error: "log not found",
+        });
+      }
+
+      await client.query(
+        `
+        DELETE FROM workout_exercises
+        WHERE workout_id = $1
+        `,
+        [req.params.id]
+      );
+
+      for (const e of req.body.exercises) {
+        for (const [i, set] of e.sets.entries()) {
+          await client.query(
+            `
+            INSERT INTO workout_exercises
+              (workout_id, exercise, set_number, reps, weight)
+            VALUES ($1, $2, $3, $4, $5)
+            `,
+            [
+              req.params.id,
+              e.exercise.trim(),
+              i + 1,
+              set.reps.trim(),
+              set.weight ?? null,
+            ]
+          );
+        }
+      }
+
+      await client.query("COMMIT");
+
+      res.json({
+        id: Number(req.params.id),
+      });
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+  })
+);
+
+router.delete(
+  "/log/:id",
+  wrap(async (req, res) => {
+    const user = await currentUser(req);
+
+    if (user?.role !== "athlete") {
+      return res.status(403).json({
+        error: "only athletes can delete logged workouts",
+      });
+    }
+
+    const client = await pool.connect();
+
+    try {
+      await client.query("BEGIN");
+
+      const { rowCount } = await client.query(
+        `
+        DELETE FROM workouts
+        WHERE id = $1
+        AND athlete_id = $2
+        `,
+        [req.params.id, user.id]
+      );
+
+      if (rowCount === 0) {
+        await client.query("ROLLBACK");
+
+        return res.status(404).json({
+          error: "log not found",
+        });
+      }
+
+      await client.query("COMMIT");
+
+      res.status(204).end();
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
   })
 );
 

@@ -15,6 +15,7 @@ export default function Workouts({ user }) {
   const [log, setLog] = useState([]);
   const isCoach = user.role === "coach";
   const showWorkoutList = !draft && !logDraft;
+  const [editingLog, setEditingLog] = useState(null);
 
   useEffect(() => {
     fetch(API_URL, { credentials: "include" })
@@ -49,23 +50,79 @@ export default function Workouts({ user }) {
   }
 
   function startLog(w) {
+    const previousLog = log
+      .filter((entry) => entry.name === w.name)
+      .sort(
+        (a, b) => new Date(b.performed_at) - new Date(a.performed_at)
+      )[0];
+
     setLogDraft({
       coachWorkoutId: w.id,
       name: w.name,
-      // one row per planned set, prefilled with the coach's target reps
-      exercises: w.exercises.map((e) => ({
-        exercise: e.exercise,
-        sets: Array.from({ length: e.sets }, () => ({ reps: e.reps, weight: "" })),
+      exercises: w.exercises.map((exercise) => {
+        const previousSets = previousLog?.exercises?.filter(
+          (set) => set.exercise === exercise.exercise
+        );
+
+        return {
+          exercise: exercise.exercise,
+
+          sets:
+            previousSets?.length > 0
+              ? previousSets.map((set) => ({
+                  reps: set.reps,
+                  weight: set.weight ?? "",
+                }))
+              : Array.from({ length: exercise.sets }, () => ({
+                  reps: exercise.reps,
+                  weight: "",
+                })),
+        };
+      }),
+    });
+  }
+
+  function startLogEdit(entry) {
+    const grouped = {};
+
+    entry.exercises.forEach((set) => {
+      if (!grouped[set.exercise]) {
+        grouped[set.exercise] = [];
+      }
+
+      grouped[set.exercise].push({
+        reps: set.reps,
+        weight: set.weight ?? "",
+      });
+    });
+
+    setEditingLog(entry.id);
+
+    setLogDraft({
+      coachWorkoutId: entry.coach_workout_id,
+      name: entry.name,
+      exercises: Object.entries(grouped).map(([exercise, sets]) => ({
+        exercise,
+        sets,
       })),
     });
   }
+
 
   async function handleLogSave(e) {
     e.preventDefault();
     setError("");
 
-    const res = await fetch(`${API_URL}/log`, {
-      method: "POST",
+    const url = editingLog
+      ? `${API_URL}/log/${editingLog}`
+      : `${API_URL}/log`;
+
+    const method = editingLog
+      ? "PUT"
+      : "POST";
+
+    const res = await fetch(url, {
+      method,
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({
@@ -79,14 +136,17 @@ export default function Workouts({ user }) {
         })),
       }),
     });
+
     const data = await res.json();
 
     if (!res.ok) {
-      setError(data.error || "could not log workout");
+      setError(data.error || "could not save log");
       return;
     }
 
+    setEditingLog(null);
     setLogDraft(null);
+
     loadLog();
   }
 
@@ -148,6 +208,26 @@ export default function Workouts({ user }) {
     }
 
     setWorkouts(workouts.filter((w) => w.id !== id));
+  }
+
+  async function handleDeleteLog(id) {
+    if (!confirm("Delete this log entry?")) {
+      return;
+    }
+
+    setError("");
+
+    const res = await fetch(`${API_URL}/log/${id}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      setError("could not delete log");
+      return;
+    }
+
+    setLog(log.filter((entry) => entry.id !== id));
   }
 
   function updateRow(i, field, value) {
@@ -254,7 +334,9 @@ export default function Workouts({ user }) {
 
       {logDraft && (
         <form onSubmit={handleLogSave}>
-          <h2>Log: {logDraft.name}</h2>
+          <h2>
+            {editingLog ? "Edit Log" : "Log"}: {logDraft.name}
+          </h2>
           <p>Enter the reps and weight for each set. Leave weight blank for bodyweight.</p>
           {logDraft.exercises.map((row, i) => (
             <fieldset key={i}>
@@ -314,7 +396,13 @@ export default function Workouts({ user }) {
             </fieldset>
           ))}
           <button type="submit">Save Log</button>
-          <button type="button" onClick={() => setLogDraft(null)}>
+          <button
+            type="button"
+            onClick={() => {
+              setLogDraft(null);
+              setEditingLog(null);
+            }}
+          >
             Cancel
           </button>
         </form>
@@ -376,7 +464,22 @@ export default function Workouts({ user }) {
                     {entry.name || "Deleted workout"} ·{" "}
                     {new Date(entry.performed_at).toLocaleDateString()}
                   </h3>
+
                   <LogTable sets={entry.exercises} />
+
+                  <button
+                    type="button"
+                    onClick={() => startLogEdit(entry)}
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteLog(entry.id)}
+                  >
+                    Delete
+                  </button>
                 </div>
               ))
             )}
