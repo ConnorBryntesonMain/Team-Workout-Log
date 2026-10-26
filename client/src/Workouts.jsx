@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import writeExcelFile from "write-excel-file/browser";
 import "./App.css";
 
 const API_URL = "http://localhost:3000/api/workouts";
@@ -455,6 +456,13 @@ export default function Workouts({ user }) {
         <>
           <details>
             <summary>My Log</summary>
+            <button
+              type="button"
+              disabled={log.length === 0}
+              onClick={() => downloadLog("my-workout-log.xlsx", [{ name: user.name, entries: log }])}
+            >
+              Download Log
+            </button>
             {log.length === 0 ? (
               <p>You haven't logged any workouts yet.</p>
             ) : (
@@ -488,6 +496,45 @@ export default function Workouts({ user }) {
       )}
     </section>
   );
+}
+
+const LOG_HEADER = ["Date", "Workout", "Exercise", "Set", "Reps", "Weight (lbs)"];
+
+// Downloads an .xlsx with one sheet per { name, entries }, entries as returned by GET /log.
+export function downloadLog(fileName, sheets) {
+  const used = new Set();
+
+  return writeExcelFile(
+    sheets.map(({ name, entries }) => {
+      // Excel sheet names: max 31 chars, no []:*?/\, unique (case-insensitive).
+      const base = (name.replace(/[[\]:*?/\\]/g, "").trim() || "Athlete").slice(0, 28);
+      let sheet = base;
+
+      for (let i = 2; used.has(sheet.toLowerCase()); i++) {
+        sheet = `${base} ${i}`;
+      }
+
+      used.add(sheet.toLowerCase());
+
+      return {
+        sheet,
+        stickyRowsCount: 1,
+        data: [
+          LOG_HEADER.map((value) => ({ value, fontWeight: "bold" })),
+          ...entries.flatMap((entry) =>
+            entry.exercises.map((s) => [
+              new Date(entry.performed_at).toLocaleDateString(),
+              entry.name || "Deleted workout",
+              s.exercise,
+              s.set,
+              s.reps,
+              s.weight == null ? "Bodyweight" : Number(s.weight),
+            ])
+          ),
+        ],
+      };
+    })
+  ).toFile(fileName);
 }
 
 export function WorkoutTable({ rows }) {
