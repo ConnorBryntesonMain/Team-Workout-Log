@@ -168,13 +168,16 @@ With the database, server, and frontend running as above:
 
 ### Running tests
 
-From `server/`:
+The server has unit tests for the auth and workout API routes. They use Node's built-in test runner and a stubbed database, so you don't need PostgreSQL or a `.env` file to run them.
+
+From `server/` (run `npm install` first if you haven't):
 
 ```bash
-node --test src/
+npm test                 # run all tests
+npm run test:coverage    # run all tests and print a coverage report
 ```
 
-This runs the workout validation checks in `server/src/routes/workouts.test.js` (no database needed).
+A passing run ends with `# pass 55` and `# fail 0`. See [docs/TESTING.md](docs/TESTING.md) for what each test checks, how the database is stubbed, and the latest coverage numbers.
 
 ### Troubleshooting
 
