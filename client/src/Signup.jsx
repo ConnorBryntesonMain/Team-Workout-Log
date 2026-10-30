@@ -2,11 +2,21 @@ import { useState } from "react";
 
 const API_URL = "http://localhost:3000/api/auth";
 
+const SECURITY_QUESTIONS = [
+  "What was the name of your first pet?",
+  "What city were you born in?",
+  "What was your childhood nickname?",
+  "What is your mother's maiden name?",
+  "What was the name of your elementary school?",
+];
+
 export default function Signup({ onSignedUp, onSwitchToLogin }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("athlete");
+  const [securityQuestion, setSecurityQuestion] = useState(SECURITY_QUESTIONS[0]);
+  const [securityAnswer, setSecurityAnswer] = useState("");
   const [error, setError] = useState("");
 
   async function handleSubmit(e) {
@@ -17,7 +27,7 @@ export default function Signup({ onSignedUp, onSwitchToLogin }) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ name, email, password, role }),
+      body: JSON.stringify({ name, email, password, role, securityQuestion, securityAnswer }),
     });
     const data = await res.json();
 
@@ -65,6 +75,25 @@ export default function Signup({ onSignedUp, onSwitchToLogin }) {
           <option value="athlete">Athlete</option>
           <option value="coach">Coach</option>
         </select>
+      </label>
+      <label>
+        Security Question
+        <select value={securityQuestion} onChange={(e) => setSecurityQuestion(e.target.value)}>
+          {SECURITY_QUESTIONS.map((q) => (
+            <option key={q} value={q}>
+              {q}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Answer
+        <input
+          type="text"
+          value={securityAnswer}
+          onChange={(e) => setSecurityAnswer(e.target.value)}
+          required
+        />
       </label>
       {error && <p role="alert">{error}</p>}
       <button type="submit">Sign Up</button>

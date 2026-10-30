@@ -9,6 +9,11 @@ CREATE TABLE IF NOT EXISTS users (
   athlete_code VARCHAR(6)
 );
 
+-- Security question for password reset. Nullable: older accounts (and the demo seed) have none.
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS security_question VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS security_answer_hash VARCHAR(255);
+
 -- Workouts a coach builds for their team; exercises is [{exercise, sets, reps}].
 CREATE TABLE IF NOT EXISTS coach_workouts (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

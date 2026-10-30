@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Login from "./Login.jsx";
 import Signup from "./Signup.jsx";
+import ForgotPassword from "./ForgotPassword.jsx";
 import Profile from "./Profile.jsx";
 import Workouts from "./Workouts.jsx";
 import Team from "./Team.jsx";
@@ -43,7 +44,13 @@ export default function App() {
   }
 
   return mode === "login" ? (
-    <Login onLoggedIn={setUser} onSwitchToSignup={() => setMode("signup")} />
+    <Login
+      onLoggedIn={setUser}
+      onSwitchToSignup={() => setMode("signup")}
+      onForgotPassword={() => setMode("forgot")}
+    />
+  ) : mode === "forgot" ? (
+    <ForgotPassword onSwitchToLogin={() => setMode("login")} />
   ) : (
     <Signup onSignedUp={setUser} onSwitchToLogin={() => setMode("login")} />
   );

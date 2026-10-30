@@ -3,7 +3,7 @@ import "./App.css";
 
 const API_URL = "http://localhost:3000/api/auth";
 
-export default function Login({ onLoggedIn, onSwitchToSignup }) {
+export default function Login({ onLoggedIn, onSwitchToSignup, onForgotPassword }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -50,6 +50,11 @@ export default function Login({ onLoggedIn, onSwitchToSignup }) {
       </label>
       {error && <p role="alert">{error}</p>}
       <button type="submit">Log In</button>
+      <p>
+        <button type="button" onClick={onForgotPassword}>
+          Forgot password?
+        </button>
+      </p>
       <p>
         Need an account?{" "}
         <button type="button" onClick={onSwitchToSignup}>

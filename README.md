@@ -71,7 +71,7 @@ You should see `INSERT 0 2` (or `INSERT 0 0` if they already exist). This create
 | `coach@demo.com` | `password123` | coach | `123456` |
 | `athlete@demo.com` | `password123` | athlete | — |
 
-**Already had a database from an earlier version?** Re-running `schema.sql` is safe and creates any missing tables (such as the workout tables), but it never changes an existing table. If `users` predates coach codes, either add the new columns:
+**Already had a database from an earlier version?** Re-running `schema.sql` is safe and creates any missing tables (such as the workout tables), and adds the security-question columns to `users`, but otherwise never changes an existing table. Accounts created before security questions (including the demo accounts) can't use "Forgot password?". If `users` predates coach codes, either add the new columns:
 
 ```bash
 psql -h localhost -U postgres -d team_workout_log -c "ALTER TABLE users ADD COLUMN IF NOT EXISTS coach_code VARCHAR(6) NOT NULL DEFAULT '000000', ADD COLUMN IF NOT EXISTS athlete_code VARCHAR(6);"
