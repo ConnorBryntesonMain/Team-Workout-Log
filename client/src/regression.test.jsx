@@ -7,26 +7,12 @@ import Signup from "./Signup.jsx";
 import Profile from "./Profile.jsx";
 import Team from "./Team.jsx";
 import Workouts from "./Workouts.jsx";
+import { reply, stubFetch } from "./testUtils.js";
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
-
-const reply = (body, status = 200) => ({ ok: status < 400, status, json: async () => body });
-
-// Answers fetch by the first matching URL fragment; a function value is called with the URL.
-// Anything unmatched rejects, like an unreachable server.
-function stubFetch(routes) {
-  const fetch = vi.fn(async (url) => {
-    const key = Object.keys(routes).find((k) => url.includes(k));
-    if (!key) throw new TypeError("Failed to fetch");
-    const value = routes[key];
-    return typeof value === "function" ? value(url) : value;
-  });
-  vi.stubGlobal("fetch", fetch);
-  return fetch;
-}
 
 const offline = "could not reach the server";
 
