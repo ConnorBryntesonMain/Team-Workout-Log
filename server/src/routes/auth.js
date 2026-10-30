@@ -9,6 +9,9 @@ const wrap = (fn) => (req, res, next) =>
 
 const ROLES = ["coach", "athlete"];
 
+// Answers are compared case- and whitespace-insensitively.
+const normalizeAnswer = (answer) => answer.trim().toLowerCase();
+
 async function generateUniqueCoachCode() {
   while (true) {
     const code = String(
@@ -29,11 +32,11 @@ async function generateUniqueCoachCode() {
 router.post(
   "/register",
   wrap(async (req, res) => {
-    const { email, password, name, role } = req.body;
+    const { email, password, name, role, securityQuestion, securityAnswer } = req.body;
 
-    if (!email || !password || !name || !role) {
+    if (!email || !password || !name || !role || !securityQuestion || !securityAnswer?.trim()) {
       return res.status(400).json({
-        error: "email, password, name, and role are required",
+        error: "email, password, name, role, securityQuestion, and securityAnswer are required",
       });
     }
 
@@ -44,6 +47,7 @@ router.post(
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
+    const answerHash = await bcrypt.hash(normalizeAnswer(securityAnswer), 10);
 
     let coachCode;
     let athleteCode = null;
@@ -64,9 +68,11 @@ router.post(
           name,
           role,
           coach_code,
-          athlete_code
+          athlete_code,
+          security_question,
+          security_answer_hash
         )
-        VALUES ($1, $2, $3, $4, $5, $6)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING id, email, name, role, coach_code, athlete_code
         `,
         [
@@ -76,6 +82,8 @@ router.post(
           role,
           coachCode,
           athleteCode,
+          securityQuestion,
+          answerHash,
         ]
       );
 
@@ -230,6 +238,106 @@ router.get(
     );
 
     res.json(rows);
+  })
+);
+
+// Forgot-password step 1: look up the account's security question.
+router.post(
+  "/security-question",
+  wrap(async (req, res) => {
+    const { rows } = await pool.query(
+      "SELECT security_question FROM users WHERE email = $1",
+      [req.body.email]
+    );
+
+    if (!rows[0]?.security_question) {
+      return res.status(404).json({
+        error: "no security question found for that email",
+      });
+    }
+
+    res.json({
+      securityQuestion: rows[0].security_question,
+    });
+  })
+);
+
+// Forgot-password step 2: a correct answer sets the new password.
+// ponytail: no rate limiting on answer guesses; add express-rate-limit before real deployment.
+router.post(
+  "/reset-password",
+  wrap(async (req, res) => {
+    const { email, securityAnswer, newPassword } = req.body;
+
+    if (!email || !securityAnswer || !newPassword) {
+      return res.status(400).json({
+        error: "email, securityAnswer, and newPassword are required",
+      });
+    }
+
+    const { rows } = await pool.query(
+      "SELECT id, security_answer_hash FROM users WHERE email = $1",
+      [email]
+    );
+
+    const user = rows[0];
+
+    if (
+      !user?.security_answer_hash ||
+      !(await bcrypt.compare(normalizeAnswer(securityAnswer), user.security_answer_hash))
+    ) {
+      return res.status(401).json({
+        error: "incorrect security answer",
+      });
+    }
+
+    await pool.query(
+      "UPDATE users SET password_hash = $1 WHERE id = $2",
+      [await bcrypt.hash(newPassword, 10), user.id]
+    );
+
+    res.json({
+      success: true,
+    });
+  })
+);
+
+router.post(
+  "/change-password",
+  wrap(async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!req.session.userId) {
+      return res.status(401).json({
+        error: "not logged in",
+      });
+    }
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        error: "currentPassword and newPassword are required",
+      });
+    }
+
+    const { rows } = await pool.query(
+      "SELECT password_hash FROM users WHERE id = $1",
+      [req.session.userId]
+    );
+
+    if (!rows[0] || !(await bcrypt.compare(currentPassword, rows[0].password_hash))) {
+      return res.status(401).json({
+        error: "current password is incorrect",
+      });
+    }
+
+    await pool.query(
+      "UPDATE users SET password_hash = $1 WHERE id = $2",
+      [await bcrypt.hash(newPassword, 10), req.session.userId]
+    );
+
+    res.json({
+      success: true,
+    });
   })
 );
 

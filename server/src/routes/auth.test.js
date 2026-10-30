@@ -7,11 +7,23 @@ import { request, stubQuery } from "../testApp.js";
 
 afterEach(() => mock.restoreAll());
 
-const user = { email: "a@b.com", password: "pw", name: "Al", role: "athlete" };
+const user = {
+  email: "a@b.com",
+  password: "pw",
+  name: "Al",
+  role: "athlete",
+  securityQuestion: "First pet?",
+  securityAnswer: "Rex",
+};
 
 describe("POST /register", () => {
   test("400 when a field is missing", async () => {
     const res = await request(router, "POST", "/register", { body: { ...user, name: "" } });
+    assert.equal(res.status, 400);
+  });
+
+  test("400 without a security answer", async () => {
+    const res = await request(router, "POST", "/register", { body: { ...user, securityAnswer: "  " } });
     assert.equal(res.status, 400);
   });
 
@@ -26,9 +38,11 @@ describe("POST /register", () => {
     const res = await request(router, "POST", "/register", { body: user, session });
     assert.equal(res.status, 201);
     assert.equal(session.userId, 4);
-    const [, hash, , , coachCode] = query.mock.calls[0].arguments[1];
+    const [, hash, , , coachCode, , question, answerHash] = query.mock.calls[0].arguments[1];
     assert.equal(coachCode, "000000");
     assert.ok(await bcrypt.compare("pw", hash));
+    assert.equal(question, "First pet?");
+    assert.ok(await bcrypt.compare("rex", answerHash));
   });
 
   test("coach gets a unique 6-digit code, retrying on collision", async () => {
@@ -104,5 +118,86 @@ describe("team routes", () => {
     stubQuery({ rows: [] });
     const res = await request(router, "GET", "/me", { session });
     assert.equal(res.status, 401);
+  });
+});
+
+describe("POST /change-password", () => {
+  const body = { currentPassword: "old", newPassword: "new" };
+
+  test("401 when not logged in", async () => {
+    const res = await request(router, "POST", "/change-password", { body });
+    assert.equal(res.status, 401);
+  });
+
+  test("400 when a field is missing", async () => {
+    const res = await request(router, "POST", "/change-password", {
+      body: { currentPassword: "old" },
+      session: { userId: 1 },
+    });
+    assert.equal(res.status, 400);
+  });
+
+  test("401 when the current password is wrong", async () => {
+    const query = stubQuery({ rows: [{ password_hash: await bcrypt.hash("other", 4) }] });
+    const res = await request(router, "POST", "/change-password", { body, session: { userId: 1 } });
+    assert.equal(res.status, 401);
+    assert.equal(query.mock.callCount(), 1);
+  });
+
+  test("stores a hash of the new password", async () => {
+    const query = stubQuery({ rows: [{ password_hash: await bcrypt.hash("old", 4) }] }, { rowCount: 1 });
+    const res = await request(router, "POST", "/change-password", { body, session: { userId: 1 } });
+    assert.equal(res.status, 200);
+    const [hash, id] = query.mock.calls[1].arguments[1];
+    assert.equal(id, 1);
+    assert.ok(await bcrypt.compare("new", hash));
+  });
+});
+
+describe("POST /security-question", () => {
+  test("returns the question for the email", async () => {
+    stubQuery({ rows: [{ security_question: "First pet?" }] });
+    const res = await request(router, "POST", "/security-question", { body: { email: "a@b.com" } });
+    assert.equal(res.status, 200);
+    assert.equal(res.body.securityQuestion, "First pet?");
+  });
+
+  test("404 for an unknown email or an account without a question", async () => {
+    stubQuery({ rows: [] }, { rows: [{ security_question: null }] });
+    for (let i = 0; i < 2; i++) {
+      const res = await request(router, "POST", "/security-question", { body: { email: "a@b.com" } });
+      assert.equal(res.status, 404);
+    }
+  });
+});
+
+describe("POST /reset-password", () => {
+  const body = { email: "a@b.com", securityAnswer: "  REX ", newPassword: "new" };
+
+  test("400 when a field is missing", async () => {
+    const res = await request(router, "POST", "/reset-password", { body: { email: "a@b.com" } });
+    assert.equal(res.status, 400);
+  });
+
+  test("401 on a wrong answer, and no update", async () => {
+    const query = stubQuery({ rows: [{ id: 1, security_answer_hash: await bcrypt.hash("fido", 4) }] });
+    const res = await request(router, "POST", "/reset-password", { body });
+    assert.equal(res.status, 401);
+    assert.equal(query.mock.callCount(), 1);
+  });
+
+  test("401 when the account has no security answer", async () => {
+    stubQuery({ rows: [{ id: 1, security_answer_hash: null }] });
+    const res = await request(router, "POST", "/reset-password", { body });
+    assert.equal(res.status, 401);
+  });
+
+  test("correct answer (case/space-insensitive) stores the new password hash", async () => {
+    const query = stubQuery({ rows: [{ id: 1, security_answer_hash: await bcrypt.hash("rex", 4) }] }, { rowCount: 1 });
+    const res = await request(router, "POST", "/reset-password", { body });
+    assert.equal(res.status, 200);
+    const [hash, id] = query.mock.calls[1].arguments[1];
+    assert.equal(id, 1);
+    assert.ok(await bcrypt.compare("new", hash));
   });
 });

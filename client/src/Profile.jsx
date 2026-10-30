@@ -7,6 +7,10 @@ export default function Profile({ onLoggedOut }) {
   const [error, setError] = useState("");
   const [teamCode, setTeamCode] = useState("");
   const [teamError, setTeamError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordMessage, setPasswordMessage] = useState("");
 
   useEffect(() => {
     fetch(`${API_URL}/me`, { credentials: "include" })
@@ -56,6 +60,32 @@ export default function Profile({ onLoggedOut }) {
       ...user,
       athleteCode: data.athleteCode,
     });
+  }
+
+  async function handleChangePassword(e) {
+    e.preventDefault();
+    setPasswordMessage("");
+
+    const res = await fetch(`${API_URL}/change-password`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setPasswordMessage(data.error || "could not change password");
+      return;
+    }
+
+    setCurrentPassword("");
+    setNewPassword("");
+    setShowPassword(false);
+    setPasswordMessage("Password updated");
   }
 
   async function handleLeaveTeam() {
@@ -202,6 +232,51 @@ export default function Profile({ onLoggedOut }) {
       Leave Team
     </button>
     </>
+    )}
+
+    {showPassword ? (
+      <form onSubmit={handleChangePassword} style={{ marginBottom: "10px" }}>
+        <label>
+          Current Password
+          <input
+            type="password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            required
+          />
+        </label>
+        <label>
+          New Password
+          <input
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            required
+          />
+        </label>
+        <button type="submit">Save Password</button>
+        <button type="button" onClick={() => setShowPassword(false)}>
+          Cancel
+        </button>
+      </form>
+    ) : (
+      <button
+        type="button"
+        onClick={() => setShowPassword(true)}
+        style={{
+          display: "block",
+          width: "180px",
+          margin: "0 auto 10px auto",
+        }}
+      >
+        Reset Password
+      </button>
+    )}
+
+    {passwordMessage && (
+      <p role="alert" style={{ textAlign: "center" }}>
+        {passwordMessage}
+      </p>
     )}
 
     <button

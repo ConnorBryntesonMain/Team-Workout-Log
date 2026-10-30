@@ -13,6 +13,7 @@ Short records of the significant design choices in Team Workout Log: what we dec
 | 7 | Client-side page switching instead of a router | Accepted |
 | 8 | Hard-coded base workout until workout logging exists | Superseded by ADR 9 |
 | 9 | Coach workouts as JSONB templates; logs stored one row per set | Accepted |
+| 10 | Password reset via a security question | Accepted |
 
 ---
 
@@ -164,4 +165,23 @@ Every workout a coach builds is visible to all athletes whose `athlete_code` mat
 - `reps` is text in both places so values like `30 sec` work, which means reps can't be summed or compared numerically.
 - Deleting a coach workout keeps athletes' logs (`ON DELETE SET NULL`); they show as "Deleted workout". Editing a template does not change past logs, because logs copy exercise names.
 - There is no per-athlete assignment: the whole team sees every workout.
-- Input validation (`validateWorkout`, `validateLog`) has a small test file run with `node --test src/` in `server/`.
+- Input validation (`validateWorkout`, `validateLog`) and the workout routes are unit-tested; see `docs/TESTING.md`.
+
+
+## ADR 10: Password reset via a security question
+
+**Date:** 2026-10-30 · **Status:** Accepted
+
+**Context.** Users who forget their password need a way back in. The usual approach, an emailed one-time link, needs a mail service and a reset-token table, which the app doesn't have.
+
+**Decision.** At sign-up, each user picks one security question from a fixed list in `client/src/Signup.jsx` and enters an answer. The answer is trimmed, lowercased, and stored as a bcrypt hash (`users.security_answer_hash`) next to the question text (`users.security_question`). "Forgot password?" on the login page calls `POST /api/auth/security-question` to show the question, then `POST /api/auth/reset-password` with the answer and a new password. Logged-in users can also change their password from Profile with `POST /api/auth/change-password`, which requires the current password.
+
+The two columns are added with `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` in `schema.sql`, so re-running the schema upgrades an existing database.
+
+**Consequences.**
+- No email service needed.
+- Weaker than email reset: answers are often guessable or public, and there is no limit on attempts. Add rate limiting (e.g. `express-rate-limit`) before deploying.
+- `security-question` tells anyone whether an email has an account. Sign-up already reveals this (409 "email already registered").
+- The columns are nullable, so accounts created before this change, including the demo seed accounts, can't use "Forgot password?".
+- Answers are case- and whitespace-insensitive, so "Rex" and " rex " match.
+- Only one question per user.

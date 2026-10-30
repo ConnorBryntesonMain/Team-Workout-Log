@@ -13,3 +13,6 @@ Definition of Done: see README.md
 | As an athlete, I want to record a workout from a template, so that I can save my progress. | High | | Done | "Log This Workout" records reps and weight per set; blank weight = bodyweight |
 | As an athlete, I want to view my past workouts, so that I can see progress over time. | Medium | | Done | "My Log" on the Workouts page, newest first |
 | As a coach, I want to view any and all of my athletes' workouts, so I can view their progress and compare athletes. | Medium | | Done | Team page → View Workout shows each athlete's log; no side-by-side comparison yet |
+| As a registered user, I want to reset my password, so that I can get back in if I forget it. | Medium | | Done | Change password on Profile; "Forgot password?" uses the security question picked at sign-up |
+| As an athlete, I want my last weights filled in when I log a workout, so that logging is faster. | Low | | Done | Prefills from the most recent log of the same workout |
+| As a user, I want to download workout logs as a spreadsheet, so that I can analyze them elsewhere. | Low | | Done | Athletes: Download Log; coaches: Download Team Log (one sheet per athlete) |

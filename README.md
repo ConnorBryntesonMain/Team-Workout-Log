@@ -1,23 +1,24 @@
 # Team Workout Tracker
- 
+
 CS 415/515-002 — Software Design & Development
- 
+
 A web app that helps athletes track weight training and practice, and lets coaches see how an athlete's training compares to their max-lift expectations.
- 
+
 ## The Problem
- 
+
 Athletes need an easy way to log weight training and practice, and see their own progress over time. Coaches need visibility into what their athletes are doing during the week, without relying on manual check-ins.
- 
+
 ## Team
- 
+
 - Connor Brynteson — cjbrynteson@crimson.ua.edu
 - Jaxson Zuccala — jdzuccala@crimson.ua.edu
+
 ## Tech Stack
- 
+
 - **Frontend:** React
 - **Backend:** Node.js / Express
 - **Database:** PostgreSQL
-- **Authentication:** Session cookies (`express-session`) with bcrypt-hashed passwords
+- **Authentication:** Session cookies (`express-session`) with bcrypt-hashed passwords; password reset via a security question
 
 ## Running Locally
 
@@ -71,7 +72,7 @@ You should see `INSERT 0 2` (or `INSERT 0 0` if they already exist). This create
 | `coach@demo.com` | `password123` | coach | `123456` |
 | `athlete@demo.com` | `password123` | athlete | — |
 
-**Already had a database from an earlier version?** Re-running `schema.sql` is safe and creates any missing tables (such as the workout tables), but it never changes an existing table. If `users` predates coach codes, either add the new columns:
+**Already had a database from an earlier version?** Re-running `schema.sql` is safe and creates any missing tables (such as the workout tables), and adds the security-question columns to `users`, but otherwise never changes an existing table. Accounts created before security questions (including the demo accounts) can't use "Forgot password?". If `users` predates coach codes, either add the new columns:
 
 ```bash
 psql -h localhost -U postgres -d team_workout_log -c "ALTER TABLE users ADD COLUMN IF NOT EXISTS coach_code VARCHAR(6) NOT NULL DEFAULT '000000', ADD COLUMN IF NOT EXISTS athlete_code VARCHAR(6);"
@@ -159,12 +160,19 @@ With the database, server, and frontend running as above:
 | 11 | Enter `123456` and click **Join** | The page shows Team Code `123456`, Coach Name: Demo Coach, and a **Leave Team** button. |
 | 12 | Click **Workouts**, then **Log This Workout** under Leg Day | A form with one row per set, reps prefilled with `10`. |
 | 13 | Enter weights (e.g. `225`), leave one blank, click **Save Log** | **My Log** shows Leg Day with today's date; the blank weight shows "Bodyweight". |
-| 14 | Log out, log in as `coach@demo.com`, click **Team** | Demo Athlete is listed with their email. |
-| 15 | Click **View Workout** next to Demo Athlete | The athlete's logged Leg Day opens under that row; the button changes to **Hide Workout**. |
-| 16 | Log out, log in as `athlete@demo.com`, click **Leave Team** | The Enter Team Code box returns. |
-| 17 | Log out, try `athlete@demo.com` with a wrong password | The error "invalid email or password" appears. |
-| 18 | Click **Sign Up**, create a new account, pick a role | You land on that new account's Profile page. |
-| 19 | Log out, try signing up again with the same email | The error "email already registered" appears. |
+| 14 | Click **Log This Workout** under Leg Day again | The form is prefilled with the reps and weights you just logged. Click **Cancel**. |
+| 15 | In **My Log**, click **Download Log** | `my-workout-log.xlsx` downloads with one row per set. |
+| 16 | Log out, log in as `coach@demo.com`, click **Team** | Demo Athlete is listed with their email. |
+| 17 | Click **View Workout** next to Demo Athlete | The athlete's logged Leg Day opens under that row; the button changes to **Hide Workout**. |
+| 18 | Click **Download Team Log** | `team-workout-log.xlsx` downloads with one sheet per athlete. |
+| 19 | Log out, log in as `athlete@demo.com`, click **Leave Team** | The Enter Team Code box returns. |
+| 20 | Log out, try `athlete@demo.com` with a wrong password | The error "invalid email or password" appears. |
+| 21 | Click **Sign Up**, create a new account, pick a role and a security question, and enter an answer | You land on that new account's Profile page. |
+| 22 | Log out, try signing up again with the same email | The error "email already registered" appears. |
+| 23 | On the login page click **Forgot password?**, enter the new account's email, click **Continue** | Your security question appears with answer and new-password boxes. |
+| 24 | Enter a wrong answer and a new password, click **Reset Password** | The error "incorrect security answer" appears. |
+| 25 | Enter the correct answer, click **Reset Password**, then log in with the new password | "Your password has been updated." Login works with the new password. |
+| 26 | On **Profile**, click **Reset Password**, enter the current and a new password, click **Save Password** | "Password updated" appears. |
 
 ### Running tests
 
@@ -177,7 +185,7 @@ npm test                 # run all tests
 npm run test:coverage    # run all tests and print a coverage report
 ```
 
-A passing run ends with `# pass 55` and `# fail 0`. See [docs/TESTING.md](docs/TESTING.md) for what each test checks, how the database is stubbed, and the latest coverage numbers.
+A passing run ends with `# pass 66` and `# fail 0`. See [docs/TESTING.md](docs/TESTING.md) for what each test checks, how the database is stubbed, and the latest coverage numbers.
 
 ### Troubleshooting
 
@@ -186,6 +194,7 @@ A passing run ends with `# pass 55` and `# fail 0`. See [docs/TESTING.md](docs/T
 | `/health` returns `password authentication failed` | `DB_USER` / `DB_PASSWORD` in `server/.env` don't match Postgres. Redo the password step in step 2. |
 | `/health` returns `database "team_workout_log" does not exist` | Run the `createdb` command in step 2. |
 | `/health` returns `ECONNREFUSED` | Postgres isn't running. Start it (`brew services start postgresql@16`, `sudo service postgresql start`, or the Windows *Services* app). |
+| Sign-up fails and the server shows `column "security_question" of relation "users" does not exist` | Your database predates security questions. Re-run the `psql ... -f server/db/schema.sql` command in step 2. |
 | Server shows `column "coach_code" does not exist` | Your database predates the coach-code change. Run the `ALTER TABLE` command in step 2. |
 | Workouts page shows `internal server error` and the server shows `relation "coach_workouts" does not exist` (or `workouts`) | Your database predates the workout tables. Re-run the `psql ... -f server/db/schema.sql` command in step 2. |
 | Sign-up fails with `relation "users" does not exist` | The schema wasn't loaded. Run the `psql ... -f server/db/schema.sql` command in step 2. |
@@ -196,16 +205,18 @@ A passing run ends with `# pass 55` and `# fail 0`. See [docs/TESTING.md](docs/T
 | `npm run dev` errors about the Node version | Upgrade Node to 20.19+ or 22.12+. |
 
 ## Features (MVP)
- 
+
 - Login page for users. **(done)**
 - Team code access, so athletes can join a coach's team. **(done: join, leave, and a coach Team page listing athletes)**
 - Exercise templates, and athletes selecting workouts from templates. **(done: coaches create, edit, and delete workouts; athletes on the team see them)**
 - Log of workouts. **(done: athletes log reps and weight per set and see their history under My Log)**
 - Athlete-assigned workouts. *(every workout a coach builds is shared with the whole team; no per-athlete assignment yet)*
 - Coach access to an athlete's workout log. **(done: Team page → View Workout shows the athlete's logged workouts)**
+- Password reset. **(done: change password on Profile; "Forgot password?" on login uses the security question chosen at sign-up)**
+- Spreadsheet export. **(done: Download Log for athletes, Download Team Log for coaches)**
+- Previous weight numbers shown from the last workout. **(done: logging a workout prefills the last log of it)**
+
 ## Possible Later Features
- 
+
 - Custom exercise creation (coach and athlete).
 - Max rep records, and updating max rep records.
-- Spreadsheet export.
-- Previous weight numbers shown from the last workout.
