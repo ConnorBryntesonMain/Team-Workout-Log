@@ -176,16 +176,15 @@ With the database, server, and frontend running as above:
 
 ### Running tests
 
-The server has unit tests for the auth and workout API routes. They use Node's built-in test runner and a stubbed database, so you don't need PostgreSQL or a `.env` file to run them.
+There are three test suites. See [docs/TESTING.md](docs/TESTING.md) for what each test checks and the latest coverage numbers.
 
-From `server/` (run `npm install` first if you haven't):
+| Suite | Where | Command | Needs |
+|-------|-------|---------|-------|
+| Server unit tests (73) | `server/` | `npm test` (or `npm run test:coverage`) | Nothing: the database is stubbed |
+| Server integration tests (27) | `server/` | `npm run test:integration` | PostgreSQL and `server/.env`. Uses its own `<DB_NAME>_test` database, which it creates and empties itself. |
+| Client unit tests (85) | `client/` | `npm test` | Nothing: `fetch` is stubbed |
 
-```bash
-npm test                 # run all tests
-npm run test:coverage    # run all tests and print a coverage report
-```
-
-A passing run ends with `# pass 70` and `# fail 0`. See [docs/TESTING.md](docs/TESTING.md) for what each test checks, how the database is stubbed, and the latest coverage numbers.
+Run `npm install` in each folder first if you haven't.
 
 ### Troubleshooting
 
