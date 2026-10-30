@@ -9,7 +9,7 @@ afterEach(() => mock.restoreAll());
 
 const user = {
   email: "a@b.com",
-  password: "pw",
+  password: "password1",
   name: "Al",
   role: "athlete",
   securityQuestion: "First pet?",
@@ -27,6 +27,11 @@ describe("POST /register", () => {
     assert.equal(res.status, 400);
   });
 
+  test("400 for a password under 8 characters", async () => {
+    const res = await request(router, "POST", "/register", { body: { ...user, password: "short" } });
+    assert.equal(res.status, 400);
+  });
+
   test("400 on an unknown role", async () => {
     const res = await request(router, "POST", "/register", { body: { ...user, role: "admin" } });
     assert.equal(res.status, 400);
@@ -40,7 +45,7 @@ describe("POST /register", () => {
     assert.equal(session.userId, 4);
     const [, hash, , , coachCode, , question, answerHash] = query.mock.calls[0].arguments[1];
     assert.equal(coachCode, "000000");
-    assert.ok(await bcrypt.compare("pw", hash));
+    assert.ok(await bcrypt.compare("password1", hash));
     assert.equal(question, "First pet?");
     assert.ok(await bcrypt.compare("rex", answerHash));
   });
@@ -68,6 +73,11 @@ describe("POST /login", () => {
     assert.equal(res.status, 400);
   });
 
+  test("400 with a blank email", async () => {
+    const res = await request(router, "POST", "/login", { body: { email: "", password: "pw" } });
+    assert.equal(res.status, 400);
+  });
+
   test("401 for an unknown email", async () => {
     stubQuery({ rows: [] });
     const res = await request(router, "POST", "/login", { body: user });
@@ -81,7 +91,7 @@ describe("POST /login", () => {
   });
 
   test("200 and session set for a correct password", async () => {
-    stubQuery({ rows: [{ id: 4, email: user.email, password_hash: await bcrypt.hash("pw", 4) }] });
+    stubQuery({ rows: [{ id: 4, email: user.email, password_hash: await bcrypt.hash("password1", 4) }] });
     const session = {};
     const res = await request(router, "POST", "/login", { body: user, session });
     assert.equal(res.status, 200);
@@ -122,7 +132,7 @@ describe("team routes", () => {
 });
 
 describe("POST /change-password", () => {
-  const body = { currentPassword: "old", newPassword: "new" };
+  const body = { currentPassword: "old", newPassword: "newpass1" };
 
   test("401 when not logged in", async () => {
     const res = await request(router, "POST", "/change-password", { body });
@@ -135,6 +145,16 @@ describe("POST /change-password", () => {
       session: { userId: 1 },
     });
     assert.equal(res.status, 400);
+  });
+
+  test("400 for a new password under 8 characters, and no update", async () => {
+    const query = stubQuery();
+    const res = await request(router, "POST", "/change-password", {
+      body: { ...body, newPassword: "short" },
+      session: { userId: 1 },
+    });
+    assert.equal(res.status, 400);
+    assert.equal(query.mock.callCount(), 0);
   });
 
   test("401 when the current password is wrong", async () => {
@@ -150,7 +170,7 @@ describe("POST /change-password", () => {
     assert.equal(res.status, 200);
     const [hash, id] = query.mock.calls[1].arguments[1];
     assert.equal(id, 1);
-    assert.ok(await bcrypt.compare("new", hash));
+    assert.ok(await bcrypt.compare("newpass1", hash));
   });
 });
 
@@ -172,11 +192,18 @@ describe("POST /security-question", () => {
 });
 
 describe("POST /reset-password", () => {
-  const body = { email: "a@b.com", securityAnswer: "  REX ", newPassword: "new" };
+  const body = { email: "a@b.com", securityAnswer: "  REX ", newPassword: "newpass1" };
 
   test("400 when a field is missing", async () => {
     const res = await request(router, "POST", "/reset-password", { body: { email: "a@b.com" } });
     assert.equal(res.status, 400);
+  });
+
+  test("400 for a new password under 8 characters, and no update", async () => {
+    const query = stubQuery();
+    const res = await request(router, "POST", "/reset-password", { body: { ...body, newPassword: "short" } });
+    assert.equal(res.status, 400);
+    assert.equal(query.mock.callCount(), 0);
   });
 
   test("401 on a wrong answer, and no update", async () => {
@@ -198,6 +225,15 @@ describe("POST /reset-password", () => {
     assert.equal(res.status, 200);
     const [hash, id] = query.mock.calls[1].arguments[1];
     assert.equal(id, 1);
-    assert.ok(await bcrypt.compare("new", hash));
+    assert.ok(await bcrypt.compare("newpass1", hash));
+  });
+});
+
+describe("POST /logout", () => {
+  test("destroys the session and returns 204", async () => {
+    const destroy = mock.fn((cb) => cb());
+    const res = await request(router, "POST", "/logout", { session: { userId: 1, destroy } });
+    assert.equal(res.status, 204);
+    assert.equal(destroy.mock.callCount(), 1);
   });
 });

@@ -12,13 +12,19 @@ export default function Login({ onLoggedIn, onSwitchToSignup, onForgotPassword }
     e.preventDefault();
     setError("");
 
-    const res = await fetch(`${API_URL}/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json();
+    let res, data;
+    try {
+      res = await fetch(`${API_URL}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password }),
+      });
+      data = await res.json();
+    } catch {
+      setError("could not reach the server");
+      return;
+    }
 
     if (!res.ok) {
       setError(data.error || "login failed");

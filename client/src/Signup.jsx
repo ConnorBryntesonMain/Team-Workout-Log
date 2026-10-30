@@ -23,13 +23,19 @@ export default function Signup({ onSignedUp, onSwitchToLogin }) {
     e.preventDefault();
     setError("");
 
-    const res = await fetch(`${API_URL}/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ name, email, password, role, securityQuestion, securityAnswer }),
-    });
-    const data = await res.json();
+    let res, data;
+    try {
+      res = await fetch(`${API_URL}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name, email, password, role, securityQuestion, securityAnswer }),
+      });
+      data = await res.json();
+    } catch {
+      setError("could not reach the server");
+      return;
+    }
 
     if (!res.ok) {
       setError(data.error || "sign up failed");
