@@ -182,9 +182,20 @@ There are three test suites. See [docs/TESTING.md](docs/TESTING.md) for what eac
 |-------|-------|---------|-------|
 | Server unit tests (73) | `server/` | `npm test` (or `npm run test:coverage`) | Nothing: the database is stubbed |
 | Server integration tests (27) | `server/` | `npm run test:integration` | PostgreSQL and `server/.env`. Uses its own `<DB_NAME>_test` database, which it creates and empties itself. |
-| Client unit tests (85) | `client/` | `npm test` | Nothing: `fetch` is stubbed |
+| Client unit tests (85) | `client/` | `npm test` (or `npm run test:coverage`) | Nothing: `fetch` is stubbed |
 
-Run `npm install` in each folder first if you haven't.
+Run `npm install` in each folder first if you haven't. If you installed the client before coverage was added, run `npm install` in `client/` again to get `@vitest/coverage-v8`.
+
+```bash
+# Server (from server/)
+npm test                    # unit tests
+npm run test:coverage       # unit tests + coverage report
+npm run test:integration    # integration tests (needs PostgreSQL)
+
+# Client (from client/)
+npm test                    # unit tests
+npm run test:coverage       # unit tests + coverage report
+```
 
 ### Troubleshooting
 
