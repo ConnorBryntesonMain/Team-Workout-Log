@@ -94,6 +94,20 @@ describe("PUT /:id and DELETE /:id", () => {
     assert.equal(res.status, 404);
   });
 
+  test("PUT saves the trimmed workout for this coach", async () => {
+    const query = stubQuery(coach, { rows: [{ id: 7, ...body }] });
+    const res = await request(router, "PUT", "/7", {
+      session,
+      body: { name: " Legs ", exercises: [{ exercise: " Squat ", sets: 3, reps: "8" }] },
+    });
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.body, { id: 7, ...body });
+    const [name, exercises, id] = query.mock.calls[1].arguments[1];
+    assert.equal(name, "Legs");
+    assert.deepEqual(JSON.parse(exercises), body.exercises);
+    assert.equal(id, "7");
+  });
+
   test("DELETE 404 when nothing was deleted", async () => {
     stubQuery(coach, { rowCount: 0 });
     const res = await request(router, "DELETE", "/7", { session });
@@ -199,6 +213,15 @@ describe("PUT /log/:id and DELETE /log/:id", () => {
     stubClient(undefined, { rowCount: 0 });
     const res = await request(router, "DELETE", "/log/3", { session });
     assert.equal(res.status, 404);
+  });
+
+  test("DELETE 204 and commits when the log is the athlete's", async () => {
+    stubQuery(athlete);
+    const client = stubClient(undefined, { rowCount: 1 });
+    const res = await request(router, "DELETE", "/log/3", { session });
+    assert.equal(res.status, 204);
+    assert.equal(sqlOf(client.query).at(-1), "COMMIT");
+    assert.equal(client.release.mock.callCount(), 1);
   });
 
   test("DELETE 403 for coaches", async () => {

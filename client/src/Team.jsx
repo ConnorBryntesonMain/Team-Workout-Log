@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { LogTable, downloadLog } from "./Workouts.jsx";
 import "./App.css";
 
@@ -11,6 +11,8 @@ export default function Team() {
   const [openId, setOpenId] = useState(null);
   // { athleteId, entries } for the open athlete; null while loading
   const [log, setLog] = useState(null);
+  // the athlete whose log was requested last; older responses are dropped
+  const latestId = useRef(null);
 
   useEffect(() => {
     fetch(`${API_URL}/team`, { credentials: "include" })
@@ -28,19 +30,31 @@ export default function Team() {
 
   async function toggleAthlete(id) {
     if (openId === id) {
+      latestId.current = null;
       setOpenId(null);
       return;
     }
 
+    latestId.current = id;
     setOpenId(id);
     setLog(null);
     setError("");
 
     // Refetch on every open so the coach sees the athlete's latest logs.
-    const res = await fetch(`${WORKOUTS_URL}/log?athleteId=${id}`, { credentials: "include" });
-    const data = await res.json();
+    let res, data;
+    try {
+      res = await fetch(`${WORKOUTS_URL}/log?athleteId=${id}`, { credentials: "include" });
+      data = await res.json();
+    } catch {
+      res = null;
+      data = { error: "could not reach the server" };
+    }
 
-    if (!res.ok) {
+    if (latestId.current !== id) {
+      return;
+    }
+
+    if (!res?.ok) {
       setError(data.error || "could not load workouts");
       return;
     }

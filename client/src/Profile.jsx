@@ -27,10 +27,11 @@ export default function Profile({ onLoggedOut }) {
   }, []);
 
   async function handleLogout() {
+    // Log out locally even if the server can't be reached.
     await fetch(`${API_URL}/logout`, {
       method: "POST",
       credentials: "include",
-    });
+    }).catch(() => {});
 
     onLoggedOut();
   }
@@ -38,18 +39,23 @@ export default function Profile({ onLoggedOut }) {
   async function handleJoinTeam() {
     setTeamError("");
 
-    const res = await fetch(`${API_URL}/join-team`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify({
-        coachCode: teamCode,
-      }),
-    });
-
-    const data = await res.json();
+    let res, data;
+    try {
+      res = await fetch(`${API_URL}/join-team`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          coachCode: teamCode,
+        }),
+      });
+      data = await res.json();
+    } catch {
+      setTeamError("could not reach the server");
+      return;
+    }
 
     if (!res.ok) {
       setTeamError(data.error || "team code does not exist");
@@ -66,16 +72,21 @@ export default function Profile({ onLoggedOut }) {
     e.preventDefault();
     setPasswordMessage("");
 
-    const res = await fetch(`${API_URL}/change-password`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify({ currentPassword, newPassword }),
-    });
-
-    const data = await res.json();
+    let res, data;
+    try {
+      res = await fetch(`${API_URL}/change-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      data = await res.json();
+    } catch {
+      setPasswordMessage("could not reach the server");
+      return;
+    }
 
     if (!res.ok) {
       setPasswordMessage(data.error || "could not change password");
@@ -89,12 +100,21 @@ export default function Profile({ onLoggedOut }) {
   }
 
   async function handleLeaveTeam() {
-    const res = await fetch(`${API_URL}/leave-team`, {
-      method: "POST",
-      credentials: "include",
-    });
+    setTeamError("");
+
+    let res;
+    try {
+      res = await fetch(`${API_URL}/leave-team`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch {
+      setTeamError("could not reach the server");
+      return;
+    }
 
     if (!res.ok) {
+      setTeamError("could not leave team");
       return;
     }
 
@@ -231,6 +251,11 @@ export default function Profile({ onLoggedOut }) {
       >
       Leave Team
     </button>
+    {teamError && (
+      <p role="alert" style={{ textAlign: "center", color: "red" }}>
+        {teamError}
+      </p>
+    )}
     </>
     )}
 
@@ -252,6 +277,7 @@ export default function Profile({ onLoggedOut }) {
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             required
+            minLength={8}
           />
         </label>
         <button type="submit">Save Password</button>

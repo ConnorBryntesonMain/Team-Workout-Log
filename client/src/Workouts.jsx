@@ -39,20 +39,24 @@ export default function Workouts({ user }) {
   }, [isCoach]);
 
   async function loadLog() {
-    const res = await fetch(`${API_URL}/log`, { credentials: "include" });
-    const data = await res.json();
+    try {
+      const res = await fetch(`${API_URL}/log`, { credentials: "include" });
+      const data = await res.json();
 
-    if (!res.ok) {
-      setError(data.error || "could not load your log");
-      return;
+      if (!res.ok) {
+        setError(data.error || "could not load your log");
+        return;
+      }
+
+      setLog(data);
+    } catch {
+      setError("could not reach the server");
     }
-
-    setLog(data);
   }
 
   function startLog(w) {
     const previousLog = log
-      .filter((entry) => entry.name === w.name)
+      .filter((entry) => entry.coach_workout_id === w.id)
       .sort(
         (a, b) => new Date(b.performed_at) - new Date(a.performed_at)
       )[0];
@@ -122,33 +126,37 @@ export default function Workouts({ user }) {
       ? "PUT"
       : "POST";
 
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({
-        coachWorkoutId: logDraft.coachWorkoutId,
-        exercises: logDraft.exercises.map((row) => ({
-          exercise: row.exercise,
-          sets: row.sets.map((set) => ({
-            reps: set.reps,
-            weight: set.weight === "" ? null : Number(set.weight),
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          coachWorkoutId: logDraft.coachWorkoutId,
+          exercises: logDraft.exercises.map((row) => ({
+            exercise: row.exercise,
+            sets: row.sets.map((set) => ({
+              reps: set.reps,
+              weight: set.weight === "" ? null : Number(set.weight),
+            })),
           })),
-        })),
-      }),
-    });
+        }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok) {
-      setError(data.error || "could not save log");
-      return;
+      if (!res.ok) {
+        setError(data.error || "could not save log");
+        return;
+      }
+
+      setEditingLog(null);
+      setLogDraft(null);
+
+      loadLog();
+    } catch {
+      setError("could not reach the server");
     }
-
-    setEditingLog(null);
-    setLogDraft(null);
-
-    loadLog();
   }
 
   // Replace exercise i's sets with whatever change(sets) returns.
@@ -171,25 +179,29 @@ export default function Workouts({ user }) {
     e.preventDefault();
     setError("");
 
-    const res = await fetch(draft.id ? `${API_URL}/${draft.id}` : API_URL, {
-      method: draft.id ? "PUT" : "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ name: draft.name, exercises: draft.exercises }),
-    });
-    const data = await res.json();
+    try {
+      const res = await fetch(draft.id ? `${API_URL}/${draft.id}` : API_URL, {
+        method: draft.id ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name: draft.name, exercises: draft.exercises }),
+      });
+      const data = await res.json();
 
-    if (!res.ok) {
-      setError(data.error || "could not save workout");
-      return;
+      if (!res.ok) {
+        setError(data.error || "could not save workout");
+        return;
+      }
+
+      setWorkouts(
+        draft.id
+          ? workouts.map((w) => (w.id === data.id ? data : w))
+          : [...workouts, data]
+      );
+      setDraft(null);
+    } catch {
+      setError("could not reach the server");
     }
-
-    setWorkouts(
-      draft.id
-        ? workouts.map((w) => (w.id === data.id ? data : w))
-        : [...workouts, data]
-    );
-    setDraft(null);
   }
 
   async function handleDelete(id) {
@@ -198,17 +210,21 @@ export default function Workouts({ user }) {
     }
 
     setError("");
-    const res = await fetch(`${API_URL}/${id}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
+    try {
+      const res = await fetch(`${API_URL}/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
 
-    if (!res.ok) {
-      setError("could not delete workout");
-      return;
+      if (!res.ok) {
+        setError("could not delete workout");
+        return;
+      }
+
+      setWorkouts(workouts.filter((w) => w.id !== id));
+    } catch {
+      setError("could not reach the server");
     }
-
-    setWorkouts(workouts.filter((w) => w.id !== id));
   }
 
   async function handleDeleteLog(id) {
@@ -218,17 +234,21 @@ export default function Workouts({ user }) {
 
     setError("");
 
-    const res = await fetch(`${API_URL}/log/${id}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
+    try {
+      const res = await fetch(`${API_URL}/log/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
 
-    if (!res.ok) {
-      setError("could not delete log");
-      return;
+      if (!res.ok) {
+        setError("could not delete log");
+        return;
+      }
+
+      setLog(log.filter((entry) => entry.id !== id));
+    } catch {
+      setError("could not reach the server");
     }
-
-    setLog(log.filter((entry) => entry.id !== id));
   }
 
   function updateRow(i, field, value) {

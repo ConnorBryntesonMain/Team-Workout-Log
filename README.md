@@ -185,7 +185,7 @@ npm test                 # run all tests
 npm run test:coverage    # run all tests and print a coverage report
 ```
 
-A passing run ends with `# pass 66` and `# fail 0`. See [docs/TESTING.md](docs/TESTING.md) for what each test checks, how the database is stubbed, and the latest coverage numbers.
+A passing run ends with `# pass 70` and `# fail 0`. See [docs/TESTING.md](docs/TESTING.md) for what each test checks, how the database is stubbed, and the latest coverage numbers.
 
 ### Troubleshooting
 

@@ -8,6 +8,9 @@ const wrap = (fn) => (req, res, next) =>
   fn(req, res, next).catch(next);
 
 const ROLES = ["coach", "athlete"];
+const MIN_PASSWORD = 8;
+const shortPassword = (res) =>
+  res.status(400).json({ error: `password must be at least ${MIN_PASSWORD} characters` });
 
 // Answers are compared case- and whitespace-insensitively.
 const normalizeAnswer = (answer) => answer.trim().toLowerCase();
@@ -38,6 +41,10 @@ router.post(
       return res.status(400).json({
         error: "email, password, name, role, securityQuestion, and securityAnswer are required",
       });
+    }
+
+    if (password.length < MIN_PASSWORD) {
+      return shortPassword(res);
     }
 
     if (!ROLES.includes(role)) {
@@ -275,6 +282,10 @@ router.post(
       });
     }
 
+    if (newPassword.length < MIN_PASSWORD) {
+      return shortPassword(res);
+    }
+
     const { rows } = await pool.query(
       "SELECT id, security_answer_hash FROM users WHERE email = $1",
       [email]
@@ -317,6 +328,10 @@ router.post(
       return res.status(400).json({
         error: "currentPassword and newPassword are required",
       });
+    }
+
+    if (newPassword.length < MIN_PASSWORD) {
+      return shortPassword(res);
     }
 
     const { rows } = await pool.query(
