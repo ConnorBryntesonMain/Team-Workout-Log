@@ -106,3 +106,36 @@ describe("team routes", () => {
     assert.equal(res.status, 401);
   });
 });
+
+describe("POST /change-password", () => {
+  const body = { currentPassword: "old", newPassword: "new" };
+
+  test("401 when not logged in", async () => {
+    const res = await request(router, "POST", "/change-password", { body });
+    assert.equal(res.status, 401);
+  });
+
+  test("400 when a field is missing", async () => {
+    const res = await request(router, "POST", "/change-password", {
+      body: { currentPassword: "old" },
+      session: { userId: 1 },
+    });
+    assert.equal(res.status, 400);
+  });
+
+  test("401 when the current password is wrong", async () => {
+    const query = stubQuery({ rows: [{ password_hash: await bcrypt.hash("other", 4) }] });
+    const res = await request(router, "POST", "/change-password", { body, session: { userId: 1 } });
+    assert.equal(res.status, 401);
+    assert.equal(query.mock.callCount(), 1);
+  });
+
+  test("stores a hash of the new password", async () => {
+    const query = stubQuery({ rows: [{ password_hash: await bcrypt.hash("old", 4) }] }, { rowCount: 1 });
+    const res = await request(router, "POST", "/change-password", { body, session: { userId: 1 } });
+    assert.equal(res.status, 200);
+    const [hash, id] = query.mock.calls[1].arguments[1];
+    assert.equal(id, 1);
+    assert.ok(await bcrypt.compare("new", hash));
+  });
+});

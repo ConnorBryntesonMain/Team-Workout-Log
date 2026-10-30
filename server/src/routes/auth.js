@@ -233,6 +233,45 @@ router.get(
   })
 );
 
+router.post(
+  "/change-password",
+  wrap(async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!req.session.userId) {
+      return res.status(401).json({
+        error: "not logged in",
+      });
+    }
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        error: "currentPassword and newPassword are required",
+      });
+    }
+
+    const { rows } = await pool.query(
+      "SELECT password_hash FROM users WHERE id = $1",
+      [req.session.userId]
+    );
+
+    if (!rows[0] || !(await bcrypt.compare(currentPassword, rows[0].password_hash))) {
+      return res.status(401).json({
+        error: "current password is incorrect",
+      });
+    }
+
+    await pool.query(
+      "UPDATE users SET password_hash = $1 WHERE id = $2",
+      [await bcrypt.hash(newPassword, 10), req.session.userId]
+    );
+
+    res.json({
+      success: true,
+    });
+  })
+);
+
 router.post("/logout", (req, res) => {
   req.session.destroy(() => res.status(204).end());
 });
