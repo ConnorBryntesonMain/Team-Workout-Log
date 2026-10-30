@@ -1,6 +1,7 @@
 import { Router } from "express";
 import bcrypt from "bcrypt";
 import { pool } from "../db.js";
+import { logEvent, reqInfo } from "../utils/logger.js";
 
 const router = Router();
 
@@ -35,12 +36,14 @@ router.post(
     const { email, password, name, role, securityQuestion, securityAnswer } = req.body;
 
     if (!email || !password || !name || !role || !securityQuestion || !securityAnswer?.trim()) {
+      logEvent("REGISTER_FAILED", { email, reason: "missing required fields", ...reqInfo(req) });
       return res.status(400).json({
         error: "email, password, name, role, securityQuestion, and securityAnswer are required",
       });
     }
 
     if (!ROLES.includes(role)) {
+      logEvent("REGISTER_FAILED", { email, reason: "invalid role", ...reqInfo(req) });
       return res.status(400).json({
         error: "role must be 'coach' or 'athlete'",
       });
@@ -91,6 +94,8 @@ router.post(
 
       req.session.userId = user.id;
 
+      logEvent("REGISTER_SUCCESS", { userId: user.id, role: user.role, ...reqInfo(req) });
+
       res.status(201).json({
         id: user.id,
         email: user.email,
@@ -101,6 +106,7 @@ router.post(
       });
     } catch (err) {
       if (err.code === "23505") {
+        logEvent("REGISTER_FAILED", { email, reason: "email already registered", ...reqInfo(req) });
         return res.status(409).json({
           error: "email already registered",
         });
@@ -130,12 +136,19 @@ router.post(
     const user = rows[0];
 
     if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+      logEvent("LOGIN_FAILED", {
+        email,
+        reason: user ? "wrong password" : "unknown email",
+        ...reqInfo(req),
+      });
       return res.status(401).json({
         error: "invalid email or password",
       });
     }
 
     req.session.userId = user.id;
+
+    logEvent("LOGIN_SUCCESS", { userId: user.id, role: user.role, ...reqInfo(req) });
 
     res.json({
       id: user.id,
