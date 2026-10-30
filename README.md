@@ -65,14 +65,16 @@ Load the demo accounts (safe to run more than once):
 psql -h localhost -U postgres -d team_workout_log -f server/db/seed.sql
 ```
 
-You should see `INSERT 0 2` (or `INSERT 0 0` if they already exist). This creates:
+You should see `INSERT 0 2` then `INSERT 0 1` (`INSERT 0 0` for the workout if it already exists). This creates:
 
-| Email | Password | Role | Coach code |
-|-------|----------|------|------------|
-| `coach@demo.com` | `password123` | coach | `123456` |
-| `athlete@demo.com` | `password123` | athlete | — |
+| Email | Password | Role | Coach code | Team |
+|-------|----------|------|------------|------|
+| `coach@demo.com` | `password123` | coach | `123456` | — |
+| `athlete@demo.com` | `password123` | athlete | — | Demo Coach (`123456`) |
 
-**Already had a database from an earlier version?** Re-running `schema.sql` is safe and creates any missing tables (such as the workout tables), and adds the security-question columns to `users`, but otherwise never changes an existing table. Accounts created before security questions (including the demo accounts) can't use "Forgot password?". If `users` predates coach codes, either add the new columns:
+Both accounts use the security question "What was the name of your first pet?" with answer `fluffy`, so "Forgot password?" works. The coach also gets a starter workout, "Full Body A".
+
+**Already had a database from an earlier version?** Re-running `schema.sql` is safe and creates any missing tables (such as the workout tables), and adds the security-question columns to `users`, but otherwise never changes an existing table. Accounts created before security questions can't use "Forgot password?" (re-run `seed.sql` to restore the demo accounts' question). If `users` predates coach codes, either add the new columns:
 
 ```bash
 psql -h localhost -U postgres -d team_workout_log -c "ALTER TABLE users ADD COLUMN IF NOT EXISTS coach_code VARCHAR(6) NOT NULL DEFAULT '000000', ADD COLUMN IF NOT EXISTS athlete_code VARCHAR(6);"
