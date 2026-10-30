@@ -69,12 +69,12 @@ Each test mounts one router (`auth.js` or `workouts.js`) on a throwaway Express 
 
 ## Coverage
 
-Generated on 2026-10-30 with `npm run test:coverage` (Node 20.20.2). The table lists the application source files only. Node's report also lists the test files themselves at 100%, which raises the "all files" total to 95.04% lines / 93.96% branches.
+Generated on 2026-10-30 with `npm run test:coverage` (Node 20.20.2). The table lists the application source files only. Node's report also lists the test files themselves at 100%, which raises the "all files" total to 95.30% lines / 94.29% branches.
 
 | File | Lines | Branches | Functions |
 |------|------:|---------:|----------:|
 | `src/routes/workouts.js` | 94.64% | 87.37% | 100.00% |
-| `src/routes/auth.js` | 89.54% | 93.85% | 100.00% |
+| `src/routes/auth.js` | 89.86% | 94.03% | 100.00% |
 | `src/db.js` | 100.00% | 100.00% | 100.00% |
 
 `src/server.js` isn't in the report because no test loads it. It only wires the routers together, starts listening, and serves `/health`; the README's verification guide covers it by hand.
@@ -83,10 +83,10 @@ Generated on 2026-10-30 with `npm run test:coverage` (Node 20.20.2). The table l
 
 | File | Lines | What's untested |
 |------|-------|-----------------|
-| `auth.js` | 115–117 | Register rethrowing a database error other than a duplicate email |
-| `auth.js` | 208–220 | `leave-team` success |
-| `auth.js` | 232–247 | `GET /team` success (a coach listing their athletes) |
-| `auth.js` | 397–407 | `GET /me` success |
+| `auth.js` | 121–123 | Register rethrowing a database error other than a duplicate email |
+| `auth.js` | 221–233 | `leave-team` success |
+| `auth.js` | 245–260 | `GET /team` success (a coach listing their athletes) |
+| `auth.js` | 410–420 | `GET /me` success |
 | `workouts.js` | 64–65 | `validateWorkout` rejecting a blank exercise name |
 | `workouts.js` | 135–138 | `GET /log` returning 401 when logged out |
 | `workouts.js` | 196–205 | `PUT /log/:id` returning 403 for coaches and 400 for an invalid body |
@@ -127,7 +127,8 @@ The client has 85 tests. They use Vitest with jsdom and React Testing Library. E
 From `client/`:
 
 ```bash
-npm test
+npm test                 # run all tests
+npm run test:coverage    # run all tests and print a coverage report
 ```
 
 | Helper | What it does |
@@ -167,6 +168,19 @@ Loading, the load error, and the empty team; View shows the athlete's log and Hi
 ### `App.test.jsx` (5 tests)
 
 Switching between Log In, Sign Up and Reset Password; an athlete gets no Team tab; a coach can switch between all three pages, with `aria-current` on the active tab; logging out returns to Log In.
+
+### Client coverage
+
+Generated on 2026-10-30 with `npm run test:coverage` (Vitest 4.1.12, `@vitest/coverage-v8`). Vitest's text report hides files at 100%; `App.jsx`, `Login.jsx` and `ForgotPassword.jsx` are fully covered. `main.jsx` isn't in the report because no test loads it.
+
+| File | Statements | Branches | Functions | Lines |
+|------|-----------:|---------:|----------:|------:|
+| `Workouts.jsx` | 94.03% | 89.21% | 97.10% | 93.70% |
+| `Profile.jsx` | 100.00% | 91.89% | 100.00% | 100.00% |
+| `Team.jsx` | 100.00% | 92.10% | 100.00% | 100.00% |
+| `Signup.jsx` | 100.00% | 83.33% | 100.00% | 100.00% |
+| `App.jsx`, `Login.jsx`, `ForgotPassword.jsx` | 100.00% | 100.00% | 100.00% | 100.00% |
+| **All files** | **97.54%** | **92.20%** | **98.43%** | **97.45%** |
 
 ### `regression.test.jsx` (14 tests)
 
